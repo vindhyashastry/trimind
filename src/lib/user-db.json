@@ -1,0 +1,26 @@
+{
+  "users": [
+    {
+      "id": "w3lQsK7dXtpxg8TW--dGf",
+      "email": "wini@email.com",
+      "passwordHash": "e3488789cc06b33915a31343b07e0bc9:b83454ac2a120906e150d0625594a0ab9da966797a028697a750dea2b7f64f78f86084021e88670c9ebf15f26d880e61795f1313f79ed82d43c4782d2e7cbe01",
+      "name": "vindya",
+      "createdAt": "2026-03-15T16:21:12.958Z"
+    },
+    {
+      "id": "pFBRzMID2vWhtM9_kdmh9",
+      "email": "vin@gmail.com",
+      "passwordHash": "d9a4699b7214a63006c0791de371cc8c:bbe04e54260ed545fe59b156728627fbd7fdf6f3fedf41ff1536036419188edf8673ddf1c7f3bdf10e3ca3896c9735b0834f08e75f9cf02dfd5eb2ef96033292",
+      "name": "vindhya",
+      "createdAt": "2026-03-24T15:33:34.483Z"
+    },
+    {
+      "id": "test-user-id",
+      "email": "test@email.com",
+      "passwordHash": "83aec4e2d6749e497e71181a4ebb43ca:cdbf4bbaffdf9b4039b11c53534538bc299f775fb91b02e2dfe0dade83ac1ab4e9d0ed981f7f105f3b7523b0f3f1b90edbaacd493a1ffd776eb9a074e749f2de",
+      "name": "Test User",
+      "createdAt": "2026-03-24T16:14:15.697Z"
+    }
+  ],
+  "assistants": []
+}

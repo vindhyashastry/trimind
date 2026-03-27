@@ -1,0 +1,121 @@
+TECHCORP SOLUTIONS INC.
+QUARTERLY BUDGET REPORT - Q3 2026
+
+Prepared by: Finance Department
+Date: October 15, 2026
+Prepared for: Executive Leadership Team
+
+================================================================================
+EXECUTIVE SUMMARY
+================================================================================
+
+Q3 2026 budget performance shows mixed results. Total department spending reached 
+$1.2M against an approved budget of $1.15M, resulting in a 4.3% overrun. Key 
+drivers include unplanned consulting engagements and infrastructure upgrades.
+
+================================================================================
+DEPARTMENT BUDGET ALLOCATIONS - Q3 2026
+================================================================================
+
+1. INFORMATION TECHNOLOGY
+   Approved Budget: $350,000
+   Actual Spend: $342,500
+   Variance: -$7,500 (2.1% under)
+   
+   Key Items:
+   - Cloud infrastructure: $125,000
+   - Software licenses: $85,000
+   - Hardware upgrades: $78,000
+   - IT Support contracts: $54,500
+
+2. EXTERNAL CONSULTING SERVICES
+   Approved Budget: $150,000
+   Actual Spend: $175,000
+   Variance: +$25,000 (16.7% OVER BUDGET)
+   
+   Key Items:
+   - Data analytics consulting: $112,500 (DataFlow Services - Contract #DF-2026-001)
+   - Legal compliance review: $35,000
+   - Marketing consulting: $27,500
+   
+   NOTE: DataFlow Services contract requires CFO approval for any expenditure 
+   exceeding the $150,000 quarterly allocation. Overage flagged for review.
+
+3. HUMAN RESOURCES
+   Approved Budget: $200,000
+   Actual Spend: $198,500
+   Variance: -$1,500 (0.75% under)
+   
+   Key Items:
+   - Recruitment: $95,000
+   - Training programs: $55,000
+   - Employee wellness: $48,500
+
+4. MARKETING & SALES
+   Approved Budget: $250,000
+   Actual Spend: $265,000
+   Variance: +$15,000 (6% over)
+   
+   Key Items:
+   - Digital advertising: $120,000
+   - Trade shows: $85,000
+   - Content marketing: $60,000
+
+5. OPERATIONS
+   Approved Budget: $200,000
+   Actual Spend: $192,000
+   Variance: -$8,000 (4% under)
+   
+   Key Items:
+   - Facility maintenance: $85,000
+   - Equipment rental: $55,000
+   - Office supplies: $52,000
+
+================================================================================
+BUDGET OVERRUN ALERTS
+================================================================================
+
+CRITICAL: External Consulting Services exceeded approved Q3 budget by $25,000.
+Action Required: CFO review and approval needed before Q4 payments to DataFlow Services.
+
+WARNING: Marketing & Sales exceeded budget by $15,000. Review required before 
+additional Q4 spend authorization.
+
+================================================================================
+CASH FLOW PROJECTION - Q4 2026
+================================================================================
+
+Expected Revenue: $2,500,000
+Planned Expenditures: $1,180,000
+Projected Surplus: $1,320,000
+
+Q4 Budget Recommendations:
+- Increase IT budget by $50,000 for security audit
+- Maintain consulting services at $150,000 (enforce strict controls)
+- Add contingency reserve of $75,000
+
+================================================================================
+VENDOR PAYMENT TERMS - EXTERNAL CONSULTANTS
+================================================================================
+
+DataFlow Services Ltd.
+Contract #: DF-2026-001
+Annual Value: $450,000
+Payment Terms: Net 30
+Q3 Payments Made: $112,500
+Outstanding: $0
+Q4 Payment Due: September 30, 2026
+
+Note: Per Master Service Agreement Section 2.3, late payments incur 1.5% monthly 
+interest. All payments must comply with the approved Q3 budget allocation of 
+$150,000 for external consulting.
+
+================================================================================
+APPROVALS
+================================================================================
+
+Prepared by: Michael Chen, Senior Financial Analyst
+Reviewed by: Lisa Wong, Finance Manager
+Approved by: [PENDING - CFO SIGNATURE REQUIRED FOR CONSULTING OVERRUN]
+
+Date: October 15, 2026

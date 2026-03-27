@@ -1,8 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  reactCompiler: true,
+  reactCompiler: false,
+  serverExternalPackages: ["pdf-parse"],
+  turbopack: {
+    root: "C:\\Users\\Vindhya M D\\.gemini\\antigravity\\scratch\\domain-pa"
+  }
 };
 
 export default nextConfig;

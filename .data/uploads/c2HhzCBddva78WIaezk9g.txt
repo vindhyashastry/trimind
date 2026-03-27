@@ -1,0 +1,55 @@
+MASTER SERVICE AGREEMENT
+
+This Master Service Agreement ("Agreement") is entered into as of January 15, 2026, by and between TechCorp Solutions Inc. ("Client") and DataFlow Services Ltd. ("Provider").
+
+SECTION 1: SCOPE OF SERVICES
+Provider shall deliver data analytics and consulting services as outlined in Statement of Work (SOW) attached as Exhibit A.
+
+SECTION 2: COMPENSATION AND PAYMENT TERMS
+2.1 Total Contract Value: $450,000 USD annually
+2.2 Payment Schedule:
+    - Q1 Payment: $112,500 due by March 31, 2026
+    - Q2 Payment: $112,500 due by June 30, 2026
+    - Q3 Payment: $112,500 due by September 30, 2026
+    - Q4 Payment: $112,500 due by December 31, 2026
+
+2.3 Late Payment: Any payment overdue by more than 30 days shall incur interest at 1.5% per month.
+
+SECTION 3: BUDGET COMPLIANCE
+3.1 Provider acknowledges that all expenditures must align with Client's approved Q3 2026 budget allocation of $150,000 for external consulting services.
+3.2 Any costs exceeding the approved budget must receive written authorization from Client's CFO before commencement.
+3.3 Monthly expense reports shall be submitted no later than the 5th business day of each following month.
+
+SECTION 4: CONFIDENTIALITY
+4.1 Both parties agree to maintain strict confidentiality of all proprietary information exchanged during the term of this Agreement.
+4.2 Confidential information includes but is not limited to: financial data, customer lists, trade secrets, and strategic plans.
+4.3 Confidentiality obligations survive termination of this Agreement for a period of five (5) years.
+
+SECTION 5: INTELLECTUAL PROPERTY
+5.1 All work product created by Provider during the engagement shall be owned by Client upon full payment.
+5.2 Provider retains rights to pre-existing methodologies and tools.
+
+SECTION 6: TERMINATION
+6.1 Either party may terminate this Agreement with 60 days written notice.
+6.2 In case of material breach, the non-breaching party may terminate immediately upon written notice.
+6.3 Upon termination, Provider shall return all Client materials and deliver any work in progress.
+
+SECTION 7: LIMITATION OF LIABILITY
+7.1 Provider's total liability shall not exceed the total fees paid under this Agreement.
+7.2 Neither party shall be liable for indirect, incidental, or consequential damages.
+
+SECTION 8: COMPLIANCE AND REGULATORY
+8.1 Provider shall comply with all applicable laws, regulations, and industry standards.
+8.2 Provider must maintain SOC 2 Type II certification throughout the engagement.
+8.3 Regular compliance audits may be conducted by Client or its designated auditors.
+
+Signed by:
+_________________________
+John Smith, CEO
+TechCorp Solutions Inc.
+
+_________________________
+Sarah Johnson, Director
+DataFlow Services Ltd.
+
+Date: January 15, 2026

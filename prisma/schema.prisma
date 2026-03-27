@@ -1,0 +1,72 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/lib/generated/client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id          String      @id @default(cuid())
+  email       String      @unique
+  password    String      // Hashed password
+  name        String?
+  assistants  Assistant[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Assistant {
+  id                  String                @id @default(cuid())
+  name                String                // Display name
+  accessKey           String                @unique // DPA-...
+  category            String?               // Optional category
+  userId              String
+  user                User                  @relation(fields: [userId], references: [id])
+  documents           Document[]
+  messages            Message[]
+  outgoingRelations   AssistantRelation[]   @relation("SourceRelations")
+  incomingRelations   AssistantRelation[]   @relation("TargetRelations")
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+}
+
+model Document {
+  id           String    @id @default(cuid())
+  fileName     String
+  storageUrl   String    @unique // local or cloud URL where raw file is stored
+  status       String    // PENDING, PROCESSING, SUCCESS, ERROR
+  errorMessage String?
+  assistantId  String
+  assistant    Assistant @relation(fields: [assistantId], references: [id], onDelete: Cascade)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Message {
+  id          String    @id @default(cuid())
+  role        String    // user, assistant
+  content     String
+  timestamp   String    // Formatted time string
+  assistantId String
+  assistant   Assistant @relation(fields: [assistantId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+}
+
+model AssistantRelation {
+  id          String   @id @default(cuid())
+  sourceId    String   // The assistant that initiates queries
+  targetId    String   // The assistant whose knowledge is accessed
+  permission  String   // "read" = can query docs, "full" = read + write access
+  createdAt   DateTime @default(now())
+
+  source      Assistant @relation("SourceRelations", fields: [sourceId], references: [id], onDelete: Cascade)
+  target      Assistant @relation("TargetRelations", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, targetId])
+}
