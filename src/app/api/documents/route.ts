@@ -35,7 +35,11 @@ export async function GET(req: NextRequest) {
              timestamp: doc.createdAt.toISOString()
         }));
 
-        return NextResponse.json({ documents });
+        return NextResponse.json({ 
+            documents,
+            assistantId: assistant.id,
+            assistantName: assistant.name
+        });
     } catch (error) {
         console.error("Documents API error:", error);
         return NextResponse.json({ documents: [] });

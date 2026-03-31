@@ -36,6 +36,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
+import { ManageConnections } from "@/components/ManageConnections";
 
 interface UploadedDoc {
     id: string;
@@ -66,10 +67,13 @@ function ChatContent() {
     const [uploadedDocs, setUploadedDocs] = useState<UploadedDoc[]>([]);
     const [showDocs, setShowDocs] = useState(false);
     const [isLoadingDocs, setIsLoadingDocs] = useState(false);
-    const [selectionMode, setSelectionMode] = useState(false);
+const [selectionMode, setSelectionMode] = useState(false);
     const [selectedDocs, setSelectedDocs] = useState<string[]>([]);
     const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [showConnections, setShowConnections] = useState(false);
+    const [assistantId, setAssistantId] = useState<string | null>(null);
+    const [assistantName, setAssistantName] = useState<string>("Assistant");
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -79,7 +83,7 @@ function ChatContent() {
         fetch("/api/config").then(r => r.json()).then(d => setPipelineMode(d.mode)).catch(() => { });
     }, []);
 
-    const fetchDocuments = async (key: string) => {
+const fetchDocuments = async (key: string) => {
         if (!key) return;
         setIsLoadingDocs(true);
         try {
@@ -87,6 +91,11 @@ function ChatContent() {
             const data = await res.json();
             setUploadedDocs(data.documents || []);
             if (data.documents?.length > 0) setShowDocs(true);
+            // Get assistant info for connections
+            if (data.assistantId) {
+                setAssistantId(data.assistantId);
+                setAssistantName(data.assistantName || "Assistant");
+            }
         } catch { /* ignore */ }
         finally { setIsLoadingDocs(false); }
     };
@@ -518,10 +527,19 @@ function ChatContent() {
                             {pipelineMode === "local" ? "Local SLM" : "Cloud LLM"}
                         </Badge>
                     </div>
-                    <div className="flex items-center gap-3">
+<div className="flex items-center gap-3">
                         <Badge variant="outline" className={`text-xs ${responseMode === "strict" ? "border-red-500/30 text-red-400" : "border-violet-500/30 text-violet-400"}`}>
                             {responseMode === "strict" ? "🔒 Strict Mode" : "⚡ Hybrid Mode"}
                         </Badge>
+                        <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="gap-1 text-xs text-muted-foreground hover:text-primary"
+                            onClick={() => setShowConnections(true)}
+                        >
+                            <Link2 className="w-3 h-3" />
+                            <span className="hidden sm:inline">Connections</span>
+                        </Button>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             <div className={`w-2 h-2 rounded-full ${pipelineMode === "local" ? "bg-orange-500" : "bg-green-500"}`} />
                             Models Synchronized
@@ -720,6 +738,16 @@ function ChatContent() {
                     </motion.aside>
                 )}
             </AnimatePresence>
+
+            {/* Manage Connections Modal */}
+            {assistantId && (
+                <ManageConnections
+                    assistantId={assistantId}
+                    assistantName={assistantName}
+                    isOpen={showConnections}
+                    onClose={() => setShowConnections(false)}
+                />
+            )}
         </div>
     );
 }

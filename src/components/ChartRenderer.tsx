@@ -126,33 +126,44 @@ export function ChartRenderer({ json }: { json: string }) {
     }
   };
 
+  // Memoize chart to prevent re-renders when parent updates
+  const MemoizedChart = React.useMemo(() => renderChart(), [type, JSON.stringify(data), JSON.stringify(config)]);
+
   return (
-    <div className="group/chart relative w-full my-6 p-6 rounded-3xl border border-white/10 bg-black/40 backdrop-blur-md overflow-hidden" ref={chartRef}>
-      <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover/chart:opacity-100 transition-opacity z-20">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="h-8 rounded-full bg-white/5 border-white/10 hover:bg-white/10 gap-2 text-[10px]"
-          onClick={() => exportImage('png')}
-        >
-          <ImageIcon className="w-3 h-3" />
-          PNG
-        </Button>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="h-8 rounded-full bg-white/5 border-white/10 hover:bg-white/10 gap-2 text-[10px]"
-          onClick={() => exportImage('jpeg')}
-        >
-          <Download className="w-3 h-3" />
-          JPEG
-        </Button>
+    <div className="group/chart relative w-full min-w-[400px] my-6 p-6 rounded-3xl border border-white/10 bg-black/40 backdrop-blur-md" ref={chartRef}>
+      {/* Header with title and export buttons */}
+      <div className="flex items-center justify-between mb-4">
+        {title ? (
+          <h4 className="text-sm font-bold text-primary uppercase tracking-widest">{title}</h4>
+        ) : (
+          <div />
+        )}
+        <div className="flex gap-2 opacity-0 group-hover/chart:opacity-100 transition-opacity">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-7 rounded-full bg-white/5 border-white/10 hover:bg-white/10 gap-1 text-[10px]"
+            onClick={() => exportImage('png')}
+          >
+            <ImageIcon className="w-3 h-3" />
+            PNG
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-7 rounded-full bg-white/5 border-white/10 hover:bg-white/10 gap-1 text-[10px]"
+            onClick={() => exportImage('jpeg')}
+          >
+            <Download className="w-3 h-3" />
+            JPEG
+          </Button>
+        </div>
       </div>
 
-      {title && <h4 className="text-sm font-bold mb-6 text-primary uppercase tracking-widest text-center">{title}</h4>}
-      <div className="h-[300px] w-full">
+      {/* Chart */}
+      <div className="h-[350px] w-full min-w-[400px]">
         <ResponsiveContainer width="100%" height="100%">
-          {renderChart()}
+          {MemoizedChart}
         </ResponsiveContainer>
       </div>
     </div>
