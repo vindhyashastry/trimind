@@ -1,0 +1,7 @@
+node_modules
+.next
+out
+public
+src/lib/generated/client
+*.js
+tests/*.js
