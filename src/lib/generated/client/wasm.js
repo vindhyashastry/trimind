@@ -128,6 +128,7 @@ exports.Prisma.AssistantScalarFieldEnum = {
   name: 'name',
   accessKey: 'accessKey',
   category: 'category',
+  mode: 'mode',
   userId: 'userId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'

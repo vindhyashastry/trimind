@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
         const domain = formData.get("domain") as string;
         const assistantName = formData.get("assistantName") as string;
         const accessKey = formData.get("accessKey") as string || `DPA-${nanoid(6).toUpperCase()}`;
+        const mode = (formData.get("mode") as string) || "strict";
 
         if (!files || files.length === 0) {
             return NextResponse.json({ error: "No files uploaded" }, { status: 400 });
@@ -41,8 +42,15 @@ export async function POST(req: NextRequest) {
                     accessKey,
                     name: assistantName,
                     category: domain,
+                    mode: mode,
                  }
              });
+        } else {
+            // Update mode if assistant already exists
+            assistant = await prisma.assistant.update({
+                where: { accessKey },
+                data: { mode }
+            });
         }
 
         console.log(`Receiving ${files.length} files for ${assistantName} (${domain})...`);

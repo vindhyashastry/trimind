@@ -1,29 +1,36 @@
 import { NextResponse } from "next/server";
 import { parsePDF, parseExcel, chunkText } from "@/lib/file-parser";
-import { upsertDocument } from "@/lib/vector-store";
+import { upsertDocumentBatch } from "@/lib/vector-store";
 import { storage } from "@/lib/storage";
 import prisma from "@/lib/prisma";
 import { nanoid } from "nanoid";
 
-// Simple hash-based embedding (deterministic, fast, no external call)
-function hashEmbedding(text: string, dimensions: number = 384): number[] {
-    const embedding: number[] = [];
-    let hash = 0;
-    
-    for (let i = 0; i < text.length; i++) {
-        const char = text.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash;
-    }
-    
-    for (let i = 0; i < dimensions; i++) {
-        const seed = hash + i;
-        const value = Math.sin(seed) * 10000;
-        embedding.push(value - Math.floor(value));
-    }
-    
+// TF-IDF style embedding - captures word frequencies so similar texts get similar vectors
+function textEmbedding(text: string, dimensions: number = 384): number[] {
+    const words = text.toLowerCase()
+        .replace(/[^a-z0-9\s]/g, " ")
+        .split(/\s+/)
+        .filter(w => w.length > 2);
+
+    // Build word frequency map
+    const freq: Record<string, number> = {};
+    words.forEach(w => { freq[w] = (freq[w] || 0) + 1; });
+
+    const embedding = new Array(dimensions).fill(0);
+
+    // Map each word to a dimension slot using stable hash
+    Object.entries(freq).forEach(([word, count]) => {
+        let hash = 0;
+        for (let i = 0; i < word.length; i++) {
+            hash = ((hash << 5) - hash) + word.charCodeAt(i);
+            hash = hash & hash;
+        }
+        const idx = Math.abs(hash) % dimensions;
+        embedding[idx] += count / words.length; // TF score
+    });
+
     // Normalize
-    const magnitude = Math.sqrt(embedding.reduce((sum, v) => sum + v * v, 0));
+    const magnitude = Math.sqrt(embedding.reduce((sum, v) => sum + v * v, 0)) || 1;
     return embedding.map(v => v / magnitude);
 }
 
@@ -41,6 +48,9 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Missing required payload" }, { status: 400 });
         }
 
+        console.time(`ProcessDoc-${documentId}`);
+        console.log(`[Worker] Starting: ${originalName} (${documentId})`);
+
         // Mark as processing
         await prisma.document.update({
             where: { id: documentId },
@@ -48,9 +58,11 @@ export async function POST(req: Request) {
         });
 
         // Download file
+        console.log(`[Worker] Downloading...`);
         const buffer = await storage.downloadFile(fileUri);
 
         // Extract text
+        console.log(`[Worker] Parsing content...`);
         let text = "";
         if (originalName.endsWith(".pdf")) {
             const result = await parsePDF(buffer);
@@ -65,40 +77,47 @@ export async function POST(req: Request) {
             throw new Error("Document is empty.");
         }
 
-        // Chunk text (simpler, faster)
+        // Chunk text
+        console.log(`[Worker] Chunking...`);
         const chunks = chunkText(text, 800, 100);
 
-        // Process chunks with fast hash embeddings
         let totalChunks = 0;
-        const BATCH_SIZE = 10;
-        
-        for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
-            const batch = chunks.slice(i, i + BATCH_SIZE);
+        const recordsToUpsert = [];
+
+        console.log(`[Worker] Generating hashes for ${chunks.length} chunks...`);
+        for (const chunkText of chunks) {
+            const chunkId = nanoid();
+            const embedding = textEmbedding(chunkText);
             
-            await Promise.all(batch.map(async (chunkText, idx) => {
-                const chunkId = nanoid();
-                const embedding = hashEmbedding(chunkText);
-                
-                await upsertDocument(chunkId, embedding, {
+            recordsToUpsert.push({
+                id: chunkId,
+                vector: embedding,
+                metadata: {
                     text: chunkText,
                     fileName: originalName,
                     domain,
                     assistantName,
                     accessKey,
-                    chunkIndex: i + idx,
+                    chunkIndex: recordsToUpsert.length,
                     timestamp: new Date().toISOString(),
                     parentDocumentId: documentId
-                });
-            }));
-            
-            totalChunks += batch.length;
+                }
+            });
         }
+
+        // Batch upsert to vector store
+        console.log(`[Worker] Saving to Vector Store...`);
+        await upsertDocumentBatch(recordsToUpsert);
+        totalChunks = recordsToUpsert.length;
 
         // Mark complete
         await prisma.document.update({
             where: { id: documentId },
             data: { status: "SUCCESS" }
         });
+
+        console.timeEnd(`ProcessDoc-${documentId}`);
+        console.log(`[Worker] Finished: ${originalName}`);
 
         return NextResponse.json({ success: true, chunks: totalChunks });
 

@@ -1,8 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import Groq from "groq-sdk";
 import { queryNamespace } from "@/lib/vector-store";
+import prisma from "@/lib/prisma";
 
 const groq = process.env.GROQ_API_KEY ? new Groq({ apiKey: process.env.GROQ_API_KEY }) : null;
+
+// TF-IDF style embedding - must match exactly what worker stores
+function textEmbedding(text: string, dimensions: number = 384): number[] {
+    const words = text.toLowerCase()
+        .replace(/[^a-z0-9\s]/g, " ")
+        .split(/\s+/)
+        .filter(w => w.length > 2);
+
+    const freq: Record<string, number> = {};
+    words.forEach(w => { freq[w] = (freq[w] || 0) + 1; });
+
+    const embedding = new Array(dimensions).fill(0);
+    Object.entries(freq).forEach(([word, count]) => {
+        let hash = 0;
+        for (let i = 0; i < word.length; i++) {
+            hash = ((hash << 5) - hash) + word.charCodeAt(i);
+            hash = hash & hash;
+        }
+        const idx = Math.abs(hash) % dimensions;
+        embedding[idx] += count / words.length;
+    });
+
+    const magnitude = Math.sqrt(embedding.reduce((sum, v) => sum + v * v, 0)) || 1;
+    return embedding.map(v => v / magnitude);
+}
 
 // Simple in-memory cache for embeddings
 const embeddingCache = new Map<string, number[]>();
@@ -25,29 +51,32 @@ async function getCachedEmbeddings(text: string): Promise<number[]> {
             signal: AbortSignal.timeout(5000)
         });
         
-        if (!response.ok) return [];
+        if (!response.ok) throw new Error("Ollama not available");
         const data = await response.json();
         const embedding = data.embedding || [];
         
-        // Cache for 5 minutes
         embeddingCache.set(cacheKey, embedding);
         setTimeout(() => embeddingCache.delete(cacheKey), 5 * 60 * 1000);
         
         return embedding;
     } catch {
-        return [];
+        // Fallback to TF-IDF embedding
+        const embedding = textEmbedding(text);
+        embeddingCache.set(cacheKey, embedding);
+        return embedding;
     }
 }
 
 const CHART_INSTRUCTIONS = `
-When asked to create a chart/graph/visualization, respond ONLY with a JSON code block in this exact format:
+When asked to create a chart/graph/visualization, respond ONLY with a JSON code block. 
+DO NOT include any citations (like [Source 1]), explanations, or text outside the code block.
+The JSON must follow this exact schema:
 \`\`\`json
 {
   "type": "pie" | "bar" | "line",
   "title": "Chart Title",
   "data": [
-    { "name": "Category A", "value": 100 },
-    { "name": "Category B", "value": 200 }
+    { "name": "Label", "value": 123 }
   ],
   "config": {
     "xKey": "name",
@@ -55,7 +84,6 @@ When asked to create a chart/graph/visualization, respond ONLY with a JSON code 
   }
 }
 \`\`\`
-Use "pie" for percentages/proportions, "bar" for comparisons, "line" for trends.
 `;
 
 const SYSTEM_PROMPTS: Record<string, string> = {
@@ -79,21 +107,36 @@ export async function POST(req: NextRequest) {
         if (accessKey.includes("-F-")) domain = "finance";
         else if (accessKey.includes("-L-")) domain = "legal";
 
-        // Get embedding (with cache)
+        // 1. Find connected assistants to expand knowledge pool
+        const assistant = await prisma.assistant.findUnique({
+            where: { accessKey },
+            include: { outgoingRelations: { include: { target: true } } }
+        });
+
+        const authorizedKeys = [accessKey];
+        if (assistant) {
+            assistant.outgoingRelations.forEach(rel => {
+                if (rel.target.accessKey) authorizedKeys.push(rel.target.accessKey);
+            });
+        }
+
+        // 2. Get embedding (with cache)
         const queryEmbedding = await getCachedEmbeddings(message);
         
-        // Search documents (skip if no embedding)
+        // 3. Search documents across all authorized namespaces
         let matches: any[] = [];
         let context = "";
         let sources = "";
+        let crossDomainUsed = false;
         
         if (queryEmbedding.length > 0) {
-            matches = await queryNamespace(queryEmbedding, { accessKey }, 5, message) || [];
+            matches = await queryNamespace(queryEmbedding, { accessKey: authorizedKeys }, 10, message) || [];
             
             if (matches.length > 0) {
-                context = matches.map((m: any, i: number) => 
-                    `[${m.metadata?.fileName || "doc"}${m.metadata?.pageNumber ? ` p.${m.metadata.pageNumber}` : ""}]: ${m.metadata?.text?.slice(0, 500)}`
-                ).join("\n\n");
+                context = matches.map((m: any, i: number) => {
+                    if (m.metadata?.accessKey !== accessKey) crossDomainUsed = true;
+                    return `[${m.metadata?.fileName || "doc"}${m.metadata?.pageNumber ? ` p.${m.metadata.pageNumber}` : ""}]: ${m.metadata?.text?.slice(0, 500)}`;
+                }).join("\n\n");
                 
                 sources = Array.from(new Set(matches.map((m: any) => 
                     `${m.metadata?.fileName}${m.metadata?.pageNumber ? ` (p.${m.metadata.pageNumber})` : ""}`
@@ -137,6 +180,8 @@ export async function POST(req: NextRequest) {
                     content: data.message?.content || "No response.",
                     confidence: matches.length > 0 ? 85 : 60,
                     source: sources,
+                    crossDomainUsed,
+                    reasoning: `Queried Domains: ${authorizedKeys.join(", ")}`,
                     time: Date.now() - startTime
                 });
             } catch {
@@ -161,7 +206,7 @@ export async function POST(req: NextRequest) {
                 { role: "user", content: message }
             ],
             temperature: responseMode === "strict" ? 0.1 : 0.3,
-            max_tokens: 1024
+            max_tokens: 4096
         });
 
         const content = completion.choices[0]?.message?.content || "No response generated.";
@@ -171,6 +216,8 @@ export async function POST(req: NextRequest) {
             content,
             confidence: matches.length > 0 ? 95 : 70,
             source: sources,
+            crossDomainUsed,
+            reasoning: `Queried Domains: ${authorizedKeys.join(", ")}`,
             time: Date.now() - startTime
         });
 

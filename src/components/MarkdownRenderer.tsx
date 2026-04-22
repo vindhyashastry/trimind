@@ -11,11 +11,9 @@ interface MarkdownRendererProps {
   sourceMap?: Map<string, { chunkId?: string; documentId?: string }>;
 }
 
-export function MarkdownRenderer({ content, className = "", accessKey, sourceMap }: MarkdownRendererProps) {
-  // Helper to check if text contains citations
+export const MarkdownRenderer = React.memo(function MarkdownRenderer({ content, className = "", accessKey, sourceMap }: MarkdownRendererProps) {
   const hasCitations = (text: string) => /\[(Cross-)?Source \d+:[^\]]+\]/.test(text);
   
-  // Helper to render text with citations
   const renderWithCitations = (children: React.ReactNode) => {
     const textContent = React.Children.toArray(children)
       .map(c => typeof c === "string" ? c : "")
@@ -28,57 +26,70 @@ export function MarkdownRenderer({ content, className = "", accessKey, sourceMap
   };
 
   return (
-    <div className={`prose prose-invert max-w-none ${className}`}>
+    <div className={`prose prose-sm max-w-none ${className}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
           table: ({ children }) => (
-            <div className="my-6 overflow-x-auto rounded-2xl border border-white/5 bg-white/[0.02] shadow-xl">
+            <div className="my-4 overflow-x-auto rounded-xl border border-border">
               <table className="w-full text-left text-sm border-collapse">
                 {children}
               </table>
             </div>
           ),
-          thead: ({ children }) => <thead className="bg-white/5">{children}</thead>,
+          thead: ({ children }) => (
+            <thead className="bg-secondary border-b border-border">{children}</thead>
+          ),
           tbody: ({ children }) => (
-            <tbody className="divide-y divide-white/5 [&>tr:nth-child(even)]:bg-white/[0.01]">
+            <tbody className="divide-y divide-border [&>tr:nth-child(even)]:bg-secondary/30">
               {children}
             </tbody>
           ),
           th: ({ children }) => (
-            <th className="px-5 py-4 font-bold text-primary border-b border-white/5 text-xs uppercase tracking-widest leading-none">
+            <th className="px-4 py-3 font-semibold text-foreground text-xs uppercase tracking-wider">
               {children}
             </th>
           ),
           td: ({ children }) => (
-            <td className="px-5 py-4 text-muted-foreground align-top leading-relaxed">
+            <td className="px-4 py-3 text-muted-foreground align-top leading-relaxed text-sm">
               {children}
             </td>
           ),
+          h1: ({ children }) => (
+            <h1 className="text-xl font-bold text-foreground mt-6 mb-3">{children}</h1>
+          ),
+          h2: ({ children }) => (
+            <h2 className="text-lg font-bold text-foreground mt-5 mb-2.5">{children}</h2>
+          ),
           h3: ({ children }) => (
-            <div className="mt-10 mb-6 flex items-center gap-3 border-b border-white/5 pb-3">
-              <div className="w-1.5 h-6 bg-primary rounded-full shadow-[0_0_15px_rgba(var(--primary),0.6)]" />
-              <h3 className="text-sm font-bold tracking-[0.2em] text-foreground uppercase opacity-90">
+            <div className="mt-6 mb-3 flex items-center gap-2.5 border-b border-border pb-2">
+              <div className="w-1 h-5 bg-primary rounded-full" />
+              <h3 className="text-sm font-bold text-foreground tracking-wide">
                 {children}
               </h3>
             </div>
           ),
           p: ({ children }) => {
             const rendered = renderWithCitations(children);
-            return <p className="mb-4 last:mb-0 leading-relaxed text-muted-foreground/90">{rendered}</p>;
+            return <div className="mb-3 last:mb-0 leading-relaxed text-foreground/85 text-sm">{rendered}</div>;
           },
           li: ({ children }) => {
             const rendered = renderWithCitations(children);
             return (
-              <li className="flex items-start gap-3 mb-3 last:mb-0">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary/30 mt-2 flex-shrink-0" />
-                <span className="text-muted-foreground/90 leading-relaxed">{rendered}</span>
+              <li className="flex items-start gap-2.5 mb-2 last:mb-0">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary/50 mt-2 flex-shrink-0" />
+                <div className="text-foreground/85 leading-relaxed text-sm">{rendered}</div>
               </li>
             );
           },
-          ul: ({ children }) => <ul className="mb-8 space-y-1 list-none pl-1">{children}</ul>,
-          ol: ({ children }) => <ol className="list-decimal pl-5 mb-8 space-y-2 text-muted-foreground/90">{children}</ol>,
-          strong: ({ children }) => <strong className="font-bold text-white/90">{children}</strong>,
+          ul: ({ children }) => <ul className="mb-4 space-y-0.5 list-none pl-0">{children}</ul>,
+          ol: ({ children }) => <ol className="list-decimal pl-5 mb-4 space-y-1.5 text-foreground/85 text-sm">{children}</ol>,
+          strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
+          blockquote: ({ children }) => (
+            <blockquote className="border-l-4 border-primary/30 pl-4 italic text-muted-foreground my-3 text-sm">
+              {children}
+            </blockquote>
+          ),
           code: ({ inline, className, children, ...props }: any) => {
             const match = /language-(\w+)/.exec(className || "");
             const language = match ? match[1] : "";
@@ -94,10 +105,27 @@ export function MarkdownRenderer({ content, className = "", accessKey, sourceMap
               }
             }
 
+            if (inline) {
+              return (
+                <code className="px-1.5 py-0.5 rounded-md bg-secondary border border-border font-mono text-xs text-foreground" {...props}>
+                  {children}
+                </code>
+              );
+            }
+
             return (
-              <code className="px-1.5 py-0.5 rounded-md bg-white/10 font-mono text-[11px] text-primary/80" {...props}>
-                {children}
-              </code>
+              <div className="my-3 rounded-xl border border-border overflow-hidden">
+                {language && (
+                  <div className="px-4 py-2 bg-secondary border-b border-border text-xs font-mono text-muted-foreground">
+                    {language}
+                  </div>
+                )}
+                <pre className="p-4 bg-secondary/30 overflow-x-auto">
+                  <code className="font-mono text-xs text-foreground leading-relaxed" {...props}>
+                    {children}
+                  </code>
+                </pre>
+              </div>
             );
           },
         }}
@@ -106,4 +134,4 @@ export function MarkdownRenderer({ content, className = "", accessKey, sourceMap
       </ReactMarkdown>
     </div>
   );
-}
+});

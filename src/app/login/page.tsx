@@ -2,19 +2,23 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Zap, Mail, Lock, ArrowRight, Loader2, User } from "lucide-react";
+import { Zap, Mail, Lock, ArrowRight, Loader2, User, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
-export default function AuthPage() {
+function AuthContent() {
     const [isLogin, setIsLogin] = useState(true);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const callback = searchParams.get("callback") || "/dashboard";
 
     const [formData, setFormData] = useState({
         email: "",
@@ -36,12 +40,9 @@ export default function AuthPage() {
             });
 
             const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Something went wrong");
 
-            if (!res.ok) {
-                throw new Error(data.error || "something went wrong");
-            }
-
-            router.push("/");
+            router.push(callback);
             router.refresh();
         } catch (err: any) {
             setError(err.message);
@@ -51,122 +52,189 @@ export default function AuthPage() {
     };
 
     return (
-        <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
-            {/* Background Gradients */}
-            <div className="absolute top-0 -left-1/4 w-1/2 h-1/2 bg-finance-primary/10 blur-[120px] rounded-full pointer-events-none" />
-            <div className="absolute bottom-0 -right-1/4 w-1/2 h-1/2 bg-legal-primary/10 blur-[120px] rounded-full pointer-events-none" />
+        <div className="min-h-screen page-bg flex">
+            {/* Left panel — branding */}
+            <div className="hidden lg:flex lg:w-1/2 bg-primary relative overflow-hidden flex-col justify-between p-12">
+                {/* Decorative circles */}
+                <div className="absolute -top-24 -right-24 w-64 h-64 rounded-full bg-white/5" />
+                <div className="absolute -bottom-24 -left-24 w-80 h-80 rounded-full bg-white/5" />
+                <div className="absolute top-1/2 right-0 w-40 h-40 rounded-full bg-white/5" />
 
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.4 }}
-                className="w-full max-w-md relative z-10"
-            >
-                <div className="flex flex-col items-center mb-8">
-                    <Link href="/" className="flex items-center gap-2 mb-4">
-                        <div className="w-12 h-12 bg-gradient-to-br from-finance-primary to-legal-primary rounded-2xl flex items-center justify-center shadow-lg">
-                            <Zap className="text-white w-7 h-7 fill-current" />
-                        </div>
-                        <span className="text-3xl font-bold tracking-tighter text-glow">Tri mind</span>
-                    </Link>
-                    <Badge variant="secondary" className="glass border-white/10 px-4 py-1">
-                        {isLogin ? "Welcome Back" : "Create Your Account"}
-                    </Badge>
+                <Link href="/" className="flex items-center gap-2.5 relative z-10">
+                    <div className="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center">
+                        <Zap className="w-5 h-5 text-white fill-current" />
+                    </div>
+                    <span className="text-xl font-bold text-white tracking-tight">Tri mind</span>
+                </Link>
+
+                <div className="relative z-10">
+                    <h2 className="text-3xl font-bold text-white mb-4 leading-tight">
+                        Domain-aware AI,<br />built around your documents.
+                    </h2>
+                    <p className="text-primary-foreground/70 text-base leading-relaxed mb-8">
+                        Build specialized assistants trained on your financial data or legal documents — with strict isolation and verifiable answers.
+                    </p>
+                    <div className="space-y-3">
+                        {[
+                            "Answers grounded in your documents",
+                            "Strict data isolation per assistant",
+                            "Complete reasoning transparency",
+                        ].map((item) => (
+                            <div key={item} className="flex items-center gap-3 text-primary-foreground/80 text-sm">
+                                <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                                    <ArrowRight className="w-3 h-3 text-white" />
+                                </div>
+                                {item}
+                            </div>
+                        ))}
+                    </div>
                 </div>
 
-                <Card className="glass border-white/10 shadow-2xl overflow-hidden">
-                    <CardHeader className="space-y-1">
-                        <CardTitle className="text-2xl font-bold tracking-tight">
-                            {isLogin ? "Sign In" : "Sign Up"}
-                        </CardTitle>
-                        <CardDescription className="text-muted-foreground">
+                <p className="text-primary-foreground/40 text-sm relative z-10">
+                    © 2026 Tri mind Intelligent Systems
+                </p>
+            </div>
+
+            {/* Right panel — form */}
+            <div className="flex-1 flex items-center justify-center p-6">
+                <motion.div
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4 }}
+                    className="w-full max-w-md"
+                >
+                    {/* Mobile logo */}
+                    <Link href="/" className="flex items-center gap-2 mb-8 lg:hidden">
+                        <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+                            <Zap className="w-4 h-4 text-white fill-current" />
+                        </div>
+                        <span className="text-lg font-bold tracking-tight">Tri mind</span>
+                    </Link>
+
+                    <div className="mb-8">
+                        <h1 className="text-2xl font-bold tracking-tight mb-1.5">
+                            {isLogin ? "Welcome back" : "Create your account"}
+                        </h1>
+                        <p className="text-muted-foreground text-sm">
                             {isLogin
                                 ? "Enter your credentials to access your assistants"
-                                : "Enter your details to start building domain agents"}
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            {!isLogin && (
-                                <div className="space-y-2">
-                                    <div className="relative">
-                                        <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                        <Input
-                                            placeholder="Full Name"
-                                            className="pl-10 glass"
-                                            value={formData.name}
-                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                            required={!isLogin}
-                                        />
-                                    </div>
-                                </div>
-                            )}
-                            <div className="space-y-2">
-                                <div className="relative">
-                                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        type="email"
-                                        placeholder="email@example.com"
-                                        className="pl-10 glass"
-                                        value={formData.email}
-                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <div className="relative">
-                                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        type="password"
-                                        placeholder="••••••••"
-                                        className="pl-10 glass"
-                                        value={formData.password}
-                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                            </div>
+                                : "Get started with your domain assistant today"}
+                        </p>
+                    </div>
 
-                            {error && (
-                                <motion.p
-                                    initial={{ opacity: 0, height: 0 }}
-                                    animate={{ opacity: 1, height: "auto" }}
-                                    className="text-xs text-destructive bg-destructive/10 p-2 rounded border border-destructive/20"
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        {!isLogin && (
+                            <div className="space-y-1.5">
+                                <Label htmlFor="name">Full Name</Label>
+                                <div className="relative">
+                                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        id="name"
+                                        placeholder="John Smith"
+                                        className="pl-9"
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        required={!isLogin}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="space-y-1.5">
+                            <Label htmlFor="email">Email address</Label>
+                            <div className="relative">
+                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    id="email"
+                                    type="email"
+                                    placeholder="you@company.com"
+                                    className="pl-9"
+                                    value={formData.email}
+                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <Label htmlFor="password">Password</Label>
+                            <div className="relative">
+                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    id="password"
+                                    type={showPassword ? "text" : "password"}
+                                    placeholder="••••••••"
+                                    className="pl-9 pr-10"
+                                    value={formData.password}
+                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                                 >
-                                    {error}
-                                </motion.p>
-                            )}
+                                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                </button>
+                            </div>
+                        </div>
 
-                            <Button
-                                type="submit"
-                                className="w-full rounded-xl py-6 text-lg font-semibold group"
-                                disabled={loading}
+                        {error && (
+                            <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: "auto" }}
+                                className="text-sm text-destructive bg-destructive/8 px-3 py-2.5 rounded-lg border border-destructive/20"
                             >
-                                {loading ? (
-                                    <Loader2 className="animate-spin h-5 w-5" />
-                                ) : (
-                                    <>
-                                        {isLogin ? "Sign In" : "Create Account"}
-                                        <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                                    </>
-                                )}
-                            </Button>
-                        </form>
-                    </CardContent>
-                    <CardFooter className="flex flex-col gap-4 bg-white/5 border-t border-white/10 pt-6">
-                        <div className="text-sm text-center text-muted-foreground">
+                                {error}
+                            </motion.div>
+                        )}
+
+                        <Button
+                            type="submit"
+                            className="w-full h-10 font-medium"
+                            disabled={loading}
+                        >
+                            {loading ? (
+                                <Loader2 className="animate-spin h-4 w-4" />
+                            ) : (
+                                <>
+                                    {isLogin ? "Sign In" : "Create Account"}
+                                    <ArrowRight className="ml-2 w-4 h-4" />
+                                </>
+                            )}
+                        </Button>
+                    </form>
+
+                    <div className="mt-6">
+                        <Separator className="my-4" />
+                        <p className="text-center text-sm text-muted-foreground">
                             {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
                             <button
-                                onClick={() => setIsLogin(!isLogin)}
-                                className="text-primary hover:underline font-medium"
+                                onClick={() => {
+                                    setIsLogin(!isLogin);
+                                    setError("");
+                                    setFormData({ email: "", password: "", name: "" });
+                                }}
+                                className="text-primary font-medium hover:underline underline-offset-4"
                             >
-                                {isLogin ? "Sign Up" : "Sign In"}
+                                {isLogin ? "Sign up for free" : "Sign in"}
                             </button>
-                        </div>
-                    </CardFooter>
-                </Card>
-            </motion.div>
+                        </p>
+                    </div>
+                </motion.div>
+            </div>
         </div>
+    );
+}
+
+export default function AuthPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+        }>
+            <AuthContent />
+        </Suspense>
     );
 }

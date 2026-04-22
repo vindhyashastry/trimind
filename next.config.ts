@@ -5,6 +5,9 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["pdf-parse"],
   turbopack: {
     root: "C:\\Users\\Vindhya M D\\.gemini\\antigravity\\scratch\\domain-pa"
+  },
+  experimental: {
+    optimizePackageImports: ["lucide-react", "framer-motion", "recharts"]
   }
 };
 

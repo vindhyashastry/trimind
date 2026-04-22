@@ -3,18 +3,12 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  X,
-  Link2,
-  Check,
-  Loader2,
-  TrendingUp,
-  Shield,
-  BookOpen,
-  AlertCircle
+  X, Link2, Check, Loader2, TrendingUp, Shield, BookOpen, AlertCircle, Plus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 interface AssistantInfo {
   id: string;
@@ -38,6 +32,17 @@ interface ManageConnectionsProps {
   onClose: () => void;
 }
 
+function getDomainConfig(category: string | null) {
+  switch (category?.toLowerCase()) {
+    case "finance":
+      return { icon: TrendingUp, badge: "finance" as const, color: "text-finance-primary", bg: "bg-finance-light" };
+    case "legal":
+      return { icon: Shield, badge: "legal" as const, color: "text-legal-primary", bg: "bg-legal-light" };
+    default:
+      return { icon: BookOpen, badge: "general" as const, color: "text-general-primary", bg: "bg-general-light" };
+  }
+}
+
 export function ManageConnections({
   assistantId,
   assistantName,
@@ -52,9 +57,7 @@ export function ManageConnections({
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    if (isOpen) {
-      fetchConnections();
-    }
+    if (isOpen) fetchConnections();
   }, [isOpen, assistantId]);
 
   const fetchConnections = async () => {
@@ -64,14 +67,9 @@ export function ManageConnections({
       const res = await fetch(`/api/assistants/${assistantId}/connections`);
       if (!res.ok) throw new Error("Failed to fetch connections");
       const data = await res.json();
-      
       setOutgoing(data.outgoing.map((r: any) => ({
-        id: r.id,
-        targetId: r.targetId,
-        permission: r.permission,
-        target: r.target
+        id: r.id, targetId: r.targetId, permission: r.permission, target: r.target
       })));
-      
       setAvailable(data.available);
     } catch (err: any) {
       setError(err.message);
@@ -80,89 +78,33 @@ export function ManageConnections({
     }
   };
 
-  const toggleConnection = (targetAssistant: AssistantInfo) => {
-    const existingIndex = outgoing.findIndex(c => c.targetId === targetAssistant.id);
-    
-    if (existingIndex >= 0) {
-      // Toggle permission: read -> none, none -> read
-      const current = outgoing[existingIndex];
-      if (current.permission === "read") {
-        // Remove connection
-        setOutgoing(outgoing.filter((_, i) => i !== existingIndex));
-        setAvailable([...available, targetAssistant]);
-      } else {
-        // Change to read
-        const newOutgoing = [...outgoing];
-        newOutgoing[existingIndex] = { ...current, permission: "read" };
-        setOutgoing(newOutgoing);
-      }
-    } else {
-      // Add new connection
-      setOutgoing([...outgoing, {
-        targetId: targetAssistant.id,
-        permission: "read",
-        target: targetAssistant
-      }]);
-      setAvailable(available.filter(a => a.id !== targetAssistant.id));
-    }
+  const addFromAvailable = (assistant: AssistantInfo) => {
+    setOutgoing(prev => [...prev, { targetId: assistant.id, permission: "read", target: assistant }]);
+    setAvailable(prev => prev.filter(a => a.id !== assistant.id));
   };
 
-  const addFromAvailable = (assistant: AssistantInfo, permission: string) => {
-    setOutgoing([...outgoing, {
-      targetId: assistant.id,
-      permission,
-      target: assistant
-    }]);
-    setAvailable(available.filter(a => a.id !== assistant.id));
+  const removeConnection = (targetId: string, target?: AssistantInfo) => {
+    setOutgoing(prev => prev.filter(c => c.targetId !== targetId));
+    if (target) setAvailable(prev => [...prev, target]);
   };
 
   const saveConnections = async () => {
     setSaving(true);
     setError(null);
     setSuccess(false);
-    
     try {
-      const connections = outgoing.map(c => ({
-        targetId: c.targetId,
-        permission: c.permission
-      }));
-      
       const res = await fetch(`/api/assistants/${assistantId}/connections`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ connections })
+        body: JSON.stringify({ connections: outgoing.map(c => ({ targetId: c.targetId, permission: c.permission })) })
       });
-      
       if (!res.ok) throw new Error("Failed to save connections");
-      
       setSuccess(true);
       setTimeout(() => setSuccess(false), 2000);
     } catch (err: any) {
       setError(err.message);
     } finally {
       setSaving(false);
-    }
-  };
-
-  const getDomainIcon = (category: string | null) => {
-    switch (category?.toLowerCase()) {
-      case "finance":
-        return <TrendingUp className="w-5 h-5 text-finance-primary" />;
-      case "legal":
-        return <Shield className="w-5 h-5 text-legal-primary" />;
-      default:
-        return <BookOpen className="w-5 h-5 text-primary" />;
-    }
-  };
-
-  const getDomainColor = (category: string | null) => {
-    switch (category?.toLowerCase()) {
-      case "finance":
-        return "finance";
-      case "legal":
-        return "legal";
-      default:
-        return "default";
     }
   };
 
@@ -173,197 +115,174 @@ export function ManageConnections({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 backdrop-blur-sm p-4"
           onClick={(e) => e.target === e.currentTarget && onClose()}
         >
           <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
-            className="w-full max-w-lg"
+            initial={{ scale: 0.96, opacity: 0, y: 8 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.96, opacity: 0, y: 8 }}
+            className="w-full max-w-md"
           >
-            <Card className="border-white/10 bg-background/95 backdrop-blur-xl">
-              <CardContent className="p-6">
-                {/* Header */}
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-primary/10">
-                      <Link2 className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold">Manage Connections</h2>
-                      <p className="text-sm text-muted-foreground">
-                        Connect <span className="text-primary font-medium">{assistantName}</span> to other assistants
-                      </p>
-                    </div>
+            <div className="rounded-2xl border border-border bg-background card-shadow-lg overflow-hidden">
+              {/* Header */}
+              <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Link2 className="w-4 h-4 text-primary" />
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="rounded-full"
-                    onClick={onClose}
-                  >
-                    <X className="w-5 h-5" />
-                  </Button>
+                  <div>
+                    <h2 className="font-semibold text-sm">Manage Connections</h2>
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-medium text-foreground">{assistantName}</span>
+                    </p>
+                  </div>
                 </div>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
 
+              {/* Body */}
+              <div className="px-6 py-5 max-h-[70vh] overflow-y-auto">
                 {error && (
-                  <div className="mb-4 p-3 rounded-xl bg-destructive/10 border border-destructive/20 flex items-center gap-2 text-destructive text-sm">
-                    <AlertCircle className="w-4 h-4" />
+                  <div className="mb-4 p-3 rounded-xl bg-destructive/8 border border-destructive/20 flex items-center gap-2 text-destructive text-sm">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
                     {error}
                   </div>
                 )}
 
                 {loading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  <div className="flex items-center justify-center py-10">
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                   </div>
                 ) : (
-                  <div className="space-y-6">
-                    {/* Current Connections */}
+                  <div className="space-y-5">
+                    {/* Active connections */}
                     <div>
-                      <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-3">
+                      <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
                         Active Connections ({outgoing.length})
                       </h3>
-                      
                       {outgoing.length === 0 ? (
-                        <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 text-center text-sm text-muted-foreground">
-                          No connections yet. Add assistants below.
+                        <div className="py-4 rounded-xl bg-secondary/40 text-center text-sm text-muted-foreground">
+                          No connections yet
                         </div>
                       ) : (
                         <div className="space-y-2">
-                          {outgoing.map((conn) => (
-                            <motion.div
-                              key={conn.targetId}
-                              layout
-                              className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/10"
-                            >
-                              <div className="p-2 rounded-lg bg-white/5">
-                                {getDomainIcon(conn.target?.category || conn.permission)}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium truncate">
-                                  {conn.target?.name || "Unknown Assistant"}
-                                </p>
-                                <p className="text-xs text-muted-foreground truncate">
-                                  {conn.target?.accessKey || conn.targetId}
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Badge
-                                  variant={getDomainColor(conn.target?.category ?? null) as any}
-                                  className="text-[10px]"
-                                >
-                                {conn.target?.category || "general"}
-                              </Badge>
-                              <Badge
-                                variant="outline"
-                                className="text-[10px] border-green-500/30 text-green-400"
+                          {outgoing.map((conn) => {
+                            const config = getDomainConfig(conn.target?.category ?? null);
+                            const Icon = config.icon;
+                            return (
+                              <motion.div
+                                key={conn.targetId}
+                                layout
+                                className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-border bg-secondary/20"
                               >
-                                <Check className="w-3 h-3 mr-1" />
-                                {conn.permission}
-                              </Badge>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                                onClick={() => {
-                                  const newOutgoing = outgoing.filter(c => c.targetId !== conn.targetId);
-                                  setOutgoing(newOutgoing);
-                                  if (conn.target) {
-                                    setAvailable([...available, conn.target as AssistantInfo]);
-                                  }
-                                }}
-                              >
-                                  <X className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            </motion.div>
-                          ))}
+                                <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0", config.bg)}>
+                                  <Icon className={cn("w-4 h-4", config.color)} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium truncate">
+                                    {conn.target?.name || "Unknown"}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    {conn.target?.accessKey}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <Badge variant={config.badge} className="text-[10px] capitalize">
+                                    {conn.target?.category || "general"}
+                                  </Badge>
+                                  <Badge variant="success" className="text-[10px] gap-1">
+                                    <Check className="w-2.5 h-2.5" />
+                                    read
+                                  </Badge>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                    onClick={() => removeConnection(conn.targetId, conn.target as AssistantInfo | undefined)}
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </Button>
+                                </div>
+                              </motion.div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
 
-                    {/* Available Assistants */}
+                    {/* Available assistants */}
                     {available.length > 0 && (
                       <div>
-                        <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-3">
-                          Available Assistants ({available.length})
+                        <Separator className="mb-4" />
+                        <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+                          Available ({available.length})
                         </h3>
                         <div className="space-y-2">
-                          {available.map((assistant) => (
-                            <motion.div
-                              key={assistant.id}
-                              layout
-                              className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:border-white/10 transition-colors cursor-pointer"
-                              onClick={() => addFromAvailable(assistant, "read")}
-                            >
-                              <div className="p-2 rounded-lg bg-white/5">
-                                {getDomainIcon(assistant.category)}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium truncate">{assistant.name}</p>
-                                <p className="text-xs text-muted-foreground truncate">
-                                  {assistant.accessKey}
-                                </p>
-                              </div>
-                              <Badge
-                                variant={getDomainColor(assistant.category ?? null) as any}
-                                className="text-[10px]"
+                          {available.map((assistant) => {
+                            const config = getDomainConfig(assistant.category);
+                            const Icon = config.icon;
+                            return (
+                              <motion.div
+                                key={assistant.id}
+                                layout
+                                className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-border bg-card hover:border-primary/30 hover:bg-secondary/20 transition-all cursor-pointer"
+                                onClick={() => addFromAvailable(assistant)}
                               >
-                                {assistant.category || "general"}
-                              </Badge>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 text-primary"
-                              >
-                                + Add
-                              </Button>
-                            </motion.div>
-                          ))}
+                                <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0", config.bg)}>
+                                  <Icon className={cn("w-4 h-4", config.color)} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium truncate">{assistant.name}</p>
+                                  <p className="text-xs text-muted-foreground truncate">{assistant.accessKey}</p>
+                                </div>
+                                <Badge variant={config.badge} className="text-[10px] capitalize flex-shrink-0">
+                                  {assistant.category || "general"}
+                                </Badge>
+                                <Button variant="ghost" size="sm" className="h-7 text-primary text-xs gap-1 flex-shrink-0">
+                                  <Plus className="w-3 h-3" />
+                                  Add
+                                </Button>
+                              </motion.div>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
 
-                    {/* Info Box */}
-                    <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
-                      <p className="text-xs text-muted-foreground">
+                    {/* Info */}
+                    <div className="rounded-xl bg-primary/5 border border-primary/15 p-3">
+                      <p className="text-xs text-muted-foreground leading-relaxed">
                         <span className="font-medium text-primary">Read permission</span> allows{" "}
-                        <span className="font-medium">{assistantName}</span> to query connected
-                        assistants' documents when answering questions.
+                        <span className="font-medium text-foreground">{assistantName}</span> to query
+                        connected assistants' documents when answering questions.
                       </p>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex justify-end gap-3 pt-2">
-                      <Button variant="ghost" onClick={onClose}>
-                        Cancel
-                      </Button>
-                      <Button
-                        onClick={saveConnections}
-                        disabled={saving}
-                        className="rounded-full px-6"
-                      >
-                        {saving ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Saving...
-                          </>
-                        ) : success ? (
-                          <>
-                            <Check className="w-4 h-4 mr-2" />
-                            Saved!
-                          </>
-                        ) : (
-                          "Save Changes"
-                        )}
-                      </Button>
                     </div>
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-4 border-t border-border flex justify-end gap-2 bg-secondary/20">
+                <Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
+                <Button
+                  size="sm"
+                  onClick={saveConnections}
+                  disabled={saving}
+                  className="px-5"
+                >
+                  {saving ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</>
+                  ) : success ? (
+                    <><Check className="w-4 h-4 mr-2" />Saved!</>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </Button>
+              </div>
+            </div>
           </motion.div>
         </motion.div>
       )}

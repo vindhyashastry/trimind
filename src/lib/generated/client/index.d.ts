@@ -2247,6 +2247,7 @@ export namespace Prisma {
     name: string | null
     accessKey: string | null
     category: string | null
+    mode: string | null
     userId: string | null
     createdAt: Date | null
     updatedAt: Date | null
@@ -2257,6 +2258,7 @@ export namespace Prisma {
     name: string | null
     accessKey: string | null
     category: string | null
+    mode: string | null
     userId: string | null
     createdAt: Date | null
     updatedAt: Date | null
@@ -2267,6 +2269,7 @@ export namespace Prisma {
     name: number
     accessKey: number
     category: number
+    mode: number
     userId: number
     createdAt: number
     updatedAt: number
@@ -2279,6 +2282,7 @@ export namespace Prisma {
     name?: true
     accessKey?: true
     category?: true
+    mode?: true
     userId?: true
     createdAt?: true
     updatedAt?: true
@@ -2289,6 +2293,7 @@ export namespace Prisma {
     name?: true
     accessKey?: true
     category?: true
+    mode?: true
     userId?: true
     createdAt?: true
     updatedAt?: true
@@ -2299,6 +2304,7 @@ export namespace Prisma {
     name?: true
     accessKey?: true
     category?: true
+    mode?: true
     userId?: true
     createdAt?: true
     updatedAt?: true
@@ -2382,6 +2388,7 @@ export namespace Prisma {
     name: string
     accessKey: string
     category: string | null
+    mode: string
     userId: string
     createdAt: Date
     updatedAt: Date
@@ -2409,6 +2416,7 @@ export namespace Prisma {
     name?: boolean
     accessKey?: boolean
     category?: boolean
+    mode?: boolean
     userId?: boolean
     createdAt?: boolean
     updatedAt?: boolean
@@ -2425,6 +2433,7 @@ export namespace Prisma {
     name?: boolean
     accessKey?: boolean
     category?: boolean
+    mode?: boolean
     userId?: boolean
     createdAt?: boolean
     updatedAt?: boolean
@@ -2436,6 +2445,7 @@ export namespace Prisma {
     name?: boolean
     accessKey?: boolean
     category?: boolean
+    mode?: boolean
     userId?: boolean
     createdAt?: boolean
     updatedAt?: boolean
@@ -2467,6 +2477,7 @@ export namespace Prisma {
       name: string
       accessKey: string
       category: string | null
+      mode: string
       userId: string
       createdAt: Date
       updatedAt: Date
@@ -2872,6 +2883,7 @@ export namespace Prisma {
     readonly name: FieldRef<"Assistant", 'String'>
     readonly accessKey: FieldRef<"Assistant", 'String'>
     readonly category: FieldRef<"Assistant", 'String'>
+    readonly mode: FieldRef<"Assistant", 'String'>
     readonly userId: FieldRef<"Assistant", 'String'>
     readonly createdAt: FieldRef<"Assistant", 'DateTime'>
     readonly updatedAt: FieldRef<"Assistant", 'DateTime'>
@@ -6160,6 +6172,7 @@ export namespace Prisma {
     name: 'name',
     accessKey: 'accessKey',
     category: 'category',
+    mode: 'mode',
     userId: 'userId',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
@@ -6318,6 +6331,7 @@ export namespace Prisma {
     name?: StringFilter<"Assistant"> | string
     accessKey?: StringFilter<"Assistant"> | string
     category?: StringNullableFilter<"Assistant"> | string | null
+    mode?: StringFilter<"Assistant"> | string
     userId?: StringFilter<"Assistant"> | string
     createdAt?: DateTimeFilter<"Assistant"> | Date | string
     updatedAt?: DateTimeFilter<"Assistant"> | Date | string
@@ -6333,6 +6347,7 @@ export namespace Prisma {
     name?: SortOrder
     accessKey?: SortOrder
     category?: SortOrderInput | SortOrder
+    mode?: SortOrder
     userId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -6351,6 +6366,7 @@ export namespace Prisma {
     NOT?: AssistantWhereInput | AssistantWhereInput[]
     name?: StringFilter<"Assistant"> | string
     category?: StringNullableFilter<"Assistant"> | string | null
+    mode?: StringFilter<"Assistant"> | string
     userId?: StringFilter<"Assistant"> | string
     createdAt?: DateTimeFilter<"Assistant"> | Date | string
     updatedAt?: DateTimeFilter<"Assistant"> | Date | string
@@ -6366,6 +6382,7 @@ export namespace Prisma {
     name?: SortOrder
     accessKey?: SortOrder
     category?: SortOrderInput | SortOrder
+    mode?: SortOrder
     userId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -6382,6 +6399,7 @@ export namespace Prisma {
     name?: StringWithAggregatesFilter<"Assistant"> | string
     accessKey?: StringWithAggregatesFilter<"Assistant"> | string
     category?: StringNullableWithAggregatesFilter<"Assistant"> | string | null
+    mode?: StringWithAggregatesFilter<"Assistant"> | string
     userId?: StringWithAggregatesFilter<"Assistant"> | string
     createdAt?: DateTimeWithAggregatesFilter<"Assistant"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Assistant"> | Date | string
@@ -6648,6 +6666,7 @@ export namespace Prisma {
     name: string
     accessKey: string
     category?: string | null
+    mode?: string
     createdAt?: Date | string
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutAssistantsInput
@@ -6662,6 +6681,7 @@ export namespace Prisma {
     name: string
     accessKey: string
     category?: string | null
+    mode?: string
     userId: string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -6676,6 +6696,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     accessKey?: StringFieldUpdateOperationsInput | string
     category?: NullableStringFieldUpdateOperationsInput | string | null
+    mode?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutAssistantsNestedInput
@@ -6690,6 +6711,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     accessKey?: StringFieldUpdateOperationsInput | string
     category?: NullableStringFieldUpdateOperationsInput | string | null
+    mode?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -6704,6 +6726,7 @@ export namespace Prisma {
     name: string
     accessKey: string
     category?: string | null
+    mode?: string
     userId: string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -6714,6 +6737,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     accessKey?: StringFieldUpdateOperationsInput | string
     category?: NullableStringFieldUpdateOperationsInput | string | null
+    mode?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -6723,6 +6747,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     accessKey?: StringFieldUpdateOperationsInput | string
     category?: NullableStringFieldUpdateOperationsInput | string | null
+    mode?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -7089,6 +7114,7 @@ export namespace Prisma {
     name?: SortOrder
     accessKey?: SortOrder
     category?: SortOrder
+    mode?: SortOrder
     userId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -7099,6 +7125,7 @@ export namespace Prisma {
     name?: SortOrder
     accessKey?: SortOrder
     category?: SortOrder
+    mode?: SortOrder
     userId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -7109,6 +7136,7 @@ export namespace Prisma {
     name?: SortOrder
     accessKey?: SortOrder
     category?: SortOrder
+    mode?: SortOrder
     userId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -7614,6 +7642,7 @@ export namespace Prisma {
     name: string
     accessKey: string
     category?: string | null
+    mode?: string
     createdAt?: Date | string
     updatedAt?: Date | string
     documents?: DocumentCreateNestedManyWithoutAssistantInput
@@ -7627,6 +7656,7 @@ export namespace Prisma {
     name: string
     accessKey: string
     category?: string | null
+    mode?: string
     createdAt?: Date | string
     updatedAt?: Date | string
     documents?: DocumentUncheckedCreateNestedManyWithoutAssistantInput
@@ -7668,6 +7698,7 @@ export namespace Prisma {
     name?: StringFilter<"Assistant"> | string
     accessKey?: StringFilter<"Assistant"> | string
     category?: StringNullableFilter<"Assistant"> | string | null
+    mode?: StringFilter<"Assistant"> | string
     userId?: StringFilter<"Assistant"> | string
     createdAt?: DateTimeFilter<"Assistant"> | Date | string
     updatedAt?: DateTimeFilter<"Assistant"> | Date | string
@@ -7931,6 +7962,7 @@ export namespace Prisma {
     name: string
     accessKey: string
     category?: string | null
+    mode?: string
     createdAt?: Date | string
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutAssistantsInput
@@ -7944,6 +7976,7 @@ export namespace Prisma {
     name: string
     accessKey: string
     category?: string | null
+    mode?: string
     userId: string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -7973,6 +8006,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     accessKey?: StringFieldUpdateOperationsInput | string
     category?: NullableStringFieldUpdateOperationsInput | string | null
+    mode?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutAssistantsNestedInput
@@ -7986,6 +8020,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     accessKey?: StringFieldUpdateOperationsInput | string
     category?: NullableStringFieldUpdateOperationsInput | string | null
+    mode?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -7999,6 +8034,7 @@ export namespace Prisma {
     name: string
     accessKey: string
     category?: string | null
+    mode?: string
     createdAt?: Date | string
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutAssistantsInput
@@ -8012,6 +8048,7 @@ export namespace Prisma {
     name: string
     accessKey: string
     category?: string | null
+    mode?: string
     userId: string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -8041,6 +8078,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     accessKey?: StringFieldUpdateOperationsInput | string
     category?: NullableStringFieldUpdateOperationsInput | string | null
+    mode?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutAssistantsNestedInput
@@ -8054,6 +8092,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     accessKey?: StringFieldUpdateOperationsInput | string
     category?: NullableStringFieldUpdateOperationsInput | string | null
+    mode?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -8067,6 +8106,7 @@ export namespace Prisma {
     name: string
     accessKey: string
     category?: string | null
+    mode?: string
     createdAt?: Date | string
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutAssistantsInput
@@ -8080,6 +8120,7 @@ export namespace Prisma {
     name: string
     accessKey: string
     category?: string | null
+    mode?: string
     userId: string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -8098,6 +8139,7 @@ export namespace Prisma {
     name: string
     accessKey: string
     category?: string | null
+    mode?: string
     createdAt?: Date | string
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutAssistantsInput
@@ -8111,6 +8153,7 @@ export namespace Prisma {
     name: string
     accessKey: string
     category?: string | null
+    mode?: string
     userId: string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -8140,6 +8183,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     accessKey?: StringFieldUpdateOperationsInput | string
     category?: NullableStringFieldUpdateOperationsInput | string | null
+    mode?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutAssistantsNestedInput
@@ -8153,6 +8197,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     accessKey?: StringFieldUpdateOperationsInput | string
     category?: NullableStringFieldUpdateOperationsInput | string | null
+    mode?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -8177,6 +8222,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     accessKey?: StringFieldUpdateOperationsInput | string
     category?: NullableStringFieldUpdateOperationsInput | string | null
+    mode?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutAssistantsNestedInput
@@ -8190,6 +8236,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     accessKey?: StringFieldUpdateOperationsInput | string
     category?: NullableStringFieldUpdateOperationsInput | string | null
+    mode?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -8203,6 +8250,7 @@ export namespace Prisma {
     name: string
     accessKey: string
     category?: string | null
+    mode?: string
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -8212,6 +8260,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     accessKey?: StringFieldUpdateOperationsInput | string
     category?: NullableStringFieldUpdateOperationsInput | string | null
+    mode?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     documents?: DocumentUpdateManyWithoutAssistantNestedInput
@@ -8225,6 +8274,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     accessKey?: StringFieldUpdateOperationsInput | string
     category?: NullableStringFieldUpdateOperationsInput | string | null
+    mode?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     documents?: DocumentUncheckedUpdateManyWithoutAssistantNestedInput
@@ -8238,6 +8288,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     accessKey?: StringFieldUpdateOperationsInput | string
     category?: NullableStringFieldUpdateOperationsInput | string | null
+    mode?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }

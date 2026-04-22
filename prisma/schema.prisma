@@ -26,6 +26,7 @@ model Assistant {
   name                String                // Display name
   accessKey           String                @unique // DPA-...
   category            String?               // Optional category
+  mode                String                @default("strict") // strict or hybrid
   userId              String
   user                User                  @relation(fields: [userId], references: [id])
   documents           Document[]

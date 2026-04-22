@@ -24,7 +24,7 @@ function getLocalDb(): LocalDoc[] {
 }
 
 function saveLocalDb(docs: LocalDoc[]) {
-  fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(docs, null, 2));
+  fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(docs));
 }
 
 export async function getEmbeddings(text: string) {
@@ -67,6 +67,52 @@ export async function upsertDocument(
   }
 }
 
+/**
+ * Optimized batch upsert for local DB to avoid O(N^2) file writes
+ */
+export async function upsertDocumentBatch(
+  records: Array<{ id: string, vector: number[], metadata: Record<string, any> }>
+) {
+  if (pc) {
+    const index = pc.index(process.env.PINECONE_INDEX!);
+    const vectors = records.map(r => ({
+      id: r.id,
+      values: r.vector,
+      metadata: r.metadata
+    })).filter(v => v.values.length > 0);
+    
+    if (vectors.length > 0) {
+      // Split into batches of 100 for Pinecone
+      for (let i = 0; i < vectors.length; i += 100) {
+        await index.upsert({ records: vectors.slice(i, i + 100) });
+      }
+    }
+  } else {
+    const docs = getLocalDb();
+    records.forEach(r => {
+      docs.push({ id: r.id, text: r.metadata.text, metadata: r.metadata });
+    });
+    saveLocalDb(docs);
+  }
+}
+
+export async function deleteDocument(documentId: string) {
+  if (pc) {
+    try {
+      const index = pc.index(process.env.PINECONE_INDEX!);
+      await index.deleteMany({
+        filter: { parentDocumentId: { $eq: documentId } }
+      });
+    } catch (error) {
+      console.error("Pinecone delete error:", error);
+    }
+  } else {
+    const docs = getLocalDb();
+    const filteredDocs = docs.filter(d => d.metadata.parentDocumentId !== documentId);
+    saveLocalDb(filteredDocs);
+  }
+}
+
 export async function queryNamespace(
   vector: number[],
   filter: Record<string, any>,
@@ -74,11 +120,12 @@ export async function queryNamespace(
   queryText?: string
 ) {
   if (pc && vector.length > 0) {
+    const accessKeys = Array.isArray(filter.accessKey) ? filter.accessKey : [filter.accessKey];
     const index = pc.index(process.env.PINECONE_INDEX!);
     const queryResponse = await index.query({
       vector,
       filter: {
-        accessKey: { $eq: filter.accessKey },
+        accessKey: { $in: accessKeys },
         ...(filter.parentDocumentId ? { parentDocumentId: { $eq: filter.parentDocumentId } } : {})
       },
       topK,
@@ -87,10 +134,14 @@ export async function queryNamespace(
     return queryResponse.matches;
   } else {
     // Local search
+    const accessKeys = Array.isArray(filter.accessKey) 
+      ? filter.accessKey.map(k => k.toLowerCase()) 
+      : [filter.accessKey?.toLowerCase()];
+
     const docs = getLocalDb();
     const filteredDocs = docs.filter(d => {
-      // Must match accessKey if provided
-      if (filter.accessKey && d.metadata.accessKey?.toLowerCase() !== filter.accessKey?.toLowerCase()) {
+      // Must match one of the accessKeys if provided
+      if (accessKeys.length > 0 && accessKeys[0] && !accessKeys.includes(d.metadata.accessKey?.toLowerCase())) {
         return false;
       }
       
@@ -99,15 +150,11 @@ export async function queryNamespace(
         return false;
       }
 
-      // Domain filtering is now a "preference" but not a hard requirement if accessKey matches
-      // This prevents "No document found" if the domain was changed or mislabeled
       return true;
     });
 
-    // If no docs at all for this key, return empty
     if (filteredDocs.length === 0) return [];
 
-    // If no query text or it's a "summarize everything" type query, return top chunks
     const VAGUE_PATTERNS = /^(summarize|overview|tell me|what is|what's|list).*(document|file|content|everything|all|this|there|available)/i;
     if (!queryText || VAGUE_PATTERNS.test(queryText.trim())) {
       return filteredDocs.slice(0, topK).map(s => ({
@@ -117,14 +164,29 @@ export async function queryNamespace(
       }));
     }
 
-    const keywords = queryText.toLowerCase().split(/\s+/).filter(k => k.length > 2);
+    const stopWords = new Set(["the","a","an","is","are","was","were","be","been","being","have","has","had","do","does","did","will","would","could","should","may","might","shall","can","need","dare","ought","used","to","of","in","for","on","with","at","by","from","up","about","into","through","during","before","after","above","below","between","and","or","but","if","then","that","this","these","those","it","its","we","our","they","their","you","your","i","my","me","him","his","her","she","he"]);
+    
+    const keywords = queryText.toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(/\s+/)
+      .filter(k => k.length > 2 && !stopWords.has(k));
+
+    if (keywords.length === 0) {
+      return filteredDocs.slice(0, topK).map(s => ({
+        id: s.id, score: 1, metadata: s.metadata
+      }));
+    }
 
     const matched = filteredDocs.map(doc => {
-      let score = 0;
       const content = (doc.text + " " + (doc.metadata.fileName || "")).toLowerCase();
+      let score = 0;
       keywords.forEach(kw => {
+        const exactCount = (content.match(new RegExp(`\\b${kw}\\b`, 'g')) || []).length;
+        score += exactCount * 2;
         if (content.includes(kw)) score += 1;
       });
+      const fileName = (doc.metadata.fileName || "").toLowerCase();
+      keywords.forEach(kw => { if (fileName.includes(kw)) score += 3; });
       return { ...doc, score };
     }).filter(s => s.score > 0);
 
@@ -139,11 +201,8 @@ export async function queryNamespace(
   }
 }
 
-// Get a specific chunk by ID
 export async function getChunkById(chunkId: string): Promise<{ id: string; metadata: Record<string, any> } | null> {
   if (pc) {
-    // For Pinecone, we'd need to fetch by ID directly
-    // This is a simplified version
     try {
       const index = pc.index(process.env.PINECONE_INDEX!);
       const fetchResponse = await index.fetch({ ids: [chunkId] });
@@ -158,7 +217,6 @@ export async function getChunkById(chunkId: string): Promise<{ id: string; metad
     }
     return null;
   } else {
-    // Local search
     const docs = getLocalDb();
     const doc = docs.find(d => d.id === chunkId);
     if (doc) {
@@ -171,15 +229,12 @@ export async function getChunkById(chunkId: string): Promise<{ id: string; metad
   }
 }
 
-// Get all chunks for a document
 export async function getChunksByDocumentId(documentId: string, accessKey: string): Promise<Array<{ id: string; metadata: Record<string, any> }>> {
   if (pc) {
-    // For Pinecone, we'd need to query with filter
-    // This would require a vector, so we use a dummy vector for filtering
     try {
       const index = pc.index(process.env.PINECONE_INDEX!);
       const queryResponse = await index.query({
-        vector: new Array(768).fill(0), // Dummy vector
+        vector: new Array(768).fill(0),
         filter: {
           parentDocumentId: { $eq: documentId },
           accessKey: { $eq: accessKey }
@@ -196,7 +251,6 @@ export async function getChunksByDocumentId(documentId: string, accessKey: strin
       return [];
     }
   } else {
-    // Local search
     const docs = getLocalDb();
     return docs
       .filter(d => d.metadata.parentDocumentId === documentId && d.metadata.accessKey === accessKey)
