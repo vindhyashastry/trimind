@@ -88,6 +88,7 @@ function BuildContent() {
     }, [initialDomain]);
 
     const handleNext = async () => {
+        console.log("Button Click: Next Step", step);
         if (step === "domain") {
             if (!domain) return;
             setStep("config");
@@ -122,6 +123,7 @@ function BuildContent() {
     };
 
     const handleBack = () => {
+        console.log("Button Click: Previous Step", step);
         if (step === "config") setStep("domain");
         else if (step === "upload") setStep("config");
     };
@@ -134,6 +136,7 @@ function BuildContent() {
     };
 
     const removeFile = (index: number) => {
+        console.log("Button Click: Remove File", index);
         setFiles((prev) => prev.filter((_, i) => i !== index));
     };
 
@@ -200,7 +203,11 @@ function BuildContent() {
                                 {DOMAINS.map((d) => (
                                     <button
                                         key={d.id}
-                                        onClick={() => { setDomain(d.id); setStep("config"); }}
+                                        onClick={() => {
+                                            console.log("Button Click: Select Domain", d.id);
+                                            setDomain(d.id);
+                                            setStep("config");
+                                        }}
                                         className={cn(
                                             "w-full flex items-center gap-5 p-5 rounded-xl border-2 text-left transition-all duration-150",
                                             domain === d.id
@@ -249,7 +256,10 @@ function BuildContent() {
                                     <p className="text-sm text-muted-foreground">Controls how the assistant answers questions.</p>
                                     <div className="grid grid-cols-2 gap-3 mt-2">
                                         <button
-                                            onClick={() => setMode("strict")}
+                                            onClick={() => {
+                                                console.log("Button Click: Switch Mode (Strict)");
+                                                setMode("strict");
+                                            }}
                                             className={cn(
                                                 "p-4 rounded-xl border-2 text-left transition-all",
                                                 mode === "strict"
@@ -265,7 +275,10 @@ function BuildContent() {
                                             <p className="text-xs text-muted-foreground">Only answers from your uploaded documents. No hallucination.</p>
                                         </button>
                                         <button
-                                            onClick={() => setMode("hybrid")}
+                                            onClick={() => {
+                                                console.log("Button Click: Switch Mode (Hybrid)");
+                                                setMode("hybrid");
+                                            }}
                                             className={cn(
                                                 "p-4 rounded-xl border-2 text-left transition-all",
                                                 mode === "hybrid"
@@ -413,11 +426,17 @@ function BuildContent() {
                             </div>
 
                             <div className="flex flex-col sm:flex-row gap-3 max-w-sm mx-auto">
-                                <Button className="flex-1" onClick={() => router.push(`/chat?key=${key}`)}>
+                                <Button className="flex-1" onClick={() => {
+                                    console.log("Button Click: Start Chatting (Finalize)");
+                                    router.push(`/chat?key=${key}`);
+                                }}>
                                     <Zap className="w-4 h-4 mr-2" />
                                     Start Chatting
                                 </Button>
-                                <Button variant="outline" className="flex-1" onClick={() => router.push("/dashboard")}>
+                                <Button variant="outline" className="flex-1" onClick={() => {
+                                    console.log("Button Click: Go to Dashboard (Finalize)");
+                                    router.push("/dashboard");
+                                }}>
                                     Dashboard
                                 </Button>
                             </div>

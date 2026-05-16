@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
                      status: "PENDING",
                      assistantId: assistant.id
                  }
-            });
+             });
 
             documentsResponse.push({
                  id: dbDoc.id,
@@ -81,8 +81,6 @@ export async function POST(req: NextRequest) {
             });
 
             // Fire and forget the background processing task
-            // In a Vercel environment, standard fetch without await might get cancelled.
-            // Using a full background queue (like Inngest) is ideal, but here we invoke it asynchronously.
             const baseUrl = req.nextUrl.origin;
             fetch(`${baseUrl}/api/worker/process-document`, {
                  method: 'POST',
@@ -98,7 +96,6 @@ export async function POST(req: NextRequest) {
             }).catch(e => console.error("Failed to enqueue background job", e));
         }
 
-        // 2. Immediately return success so the browser unblocks
         return NextResponse.json({
             message: "Documents uploaded and processing started.",
             documents: documentsResponse,

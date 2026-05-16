@@ -155,9 +155,25 @@ export async function queryNamespace(
 
     if (filteredDocs.length === 0) return [];
 
-    const VAGUE_PATTERNS = /^(summarize|overview|tell me|what is|what's|list).*(document|file|content|everything|all|this|there|available)/i;
+    const VAGUE_PATTERNS = /^(summarize|overview|tell me|what is|what's|what does|show me|list).*(document|file|content|everything|all|this|there|available|say|about)/i;
     if (!queryText || VAGUE_PATTERNS.test(queryText.trim())) {
-      return filteredDocs.slice(0, topK).map(s => ({
+      // Return chunks from different files to give a broad overview
+      const byFile: Record<string, any[]> = {};
+      filteredDocs.forEach(d => {
+        const fname = d.metadata.fileName || "unknown";
+        if (!byFile[fname]) byFile[fname] = [];
+        byFile[fname].push(d);
+      });
+
+      const result: any[] = [];
+      const fileNames = Object.keys(byFile);
+      const chunksPerFile = Math.max(2, Math.floor(topK / (fileNames.length || 1)));
+
+      fileNames.forEach(name => {
+        result.push(...byFile[name].slice(0, chunksPerFile));
+      });
+
+      return result.slice(0, topK).map(s => ({
         id: s.id,
         score: 1,
         metadata: s.metadata

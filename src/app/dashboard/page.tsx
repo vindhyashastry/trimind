@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
     Zap, Plus, Search, Key, ArrowRight, MessageSquare, Calendar,
     Trash2, LogOut, Link2, TrendingUp, Shield, BookOpen, User,
-    LayoutGrid, Loader2, ChevronRight, Settings
+    LayoutGrid, Loader2, ChevronRight, Settings, Eye, EyeOff, Lock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,6 +55,11 @@ export default function Dashboard() {
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedAssistant, setSelectedAssistant] = useState<{ id: string; name: string } | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
+    const [unlockingAssistant, setUnlockingAssistant] = useState<any>(null);
+    const [unlockInput, setUnlockInput] = useState("");
+    const [unlockError, setUnlockError] = useState(false);
+    const [mounted, setMounted] = useState(false);
     const router = useRouter();
 
     async function loadData() {
@@ -81,6 +86,7 @@ export default function Dashboard() {
     }
 
     useEffect(() => {
+        setMounted(true);
         loadData();
     }, [router]);
 
@@ -101,6 +107,7 @@ export default function Dashboard() {
     }, [searchQuery, assistants]);
 
     const handleDelete = async (id: string) => {
+        console.log("Button Click: Delete Assistant", id);
         if (!confirm("Delete this assistant? This cannot be undone.")) return;
         setDeletingId(id);
         try {
@@ -119,8 +126,25 @@ export default function Dashboard() {
     };
 
     const handleLogout = async () => {
+        console.log("Button Click: Logout");
         await fetch("/api/auth/logout", { method: "POST" });
         router.push("/");
+    };
+
+    const toggleKeyVisibility = (id: string) => {
+        console.log("Button Click: Toggle Key Visibility", id);
+        setShowKeys(prev => ({ ...prev, [id]: !prev[id] }));
+    };
+
+    const handleUnlockSubmit = (e?: React.FormEvent) => {
+        console.log("Button Click: Verify & Enter (Unlock Modal)");
+        e?.preventDefault();
+        if (unlockInput === unlockingAssistant.accessKey) {
+            router.push(`/chat?key=${unlockingAssistant.accessKey}`);
+        } else {
+            setUnlockError(true);
+            setTimeout(() => setUnlockError(false), 2000);
+        }
     };
 
     if (loading) {
@@ -169,7 +193,7 @@ export default function Dashboard() {
                                 <span className="ml-1.5 hidden sm:inline">Logout</span>
                             </Button>
                             <Link href="/build">
-                                <Button size="sm" className="gap-1.5">
+                                <Button size="sm" className="gap-1.5" onClick={() => console.log("Button Click: New Assistant (Header)")}>
                                     <Plus className="w-3.5 h-3.5" />
                                     New Assistant
                                 </Button>
@@ -215,7 +239,7 @@ export default function Dashboard() {
                         </p>
                         {!searchQuery && (
                             <Link href="/build">
-                                <Button>
+                                <Button onClick={() => console.log("Button Click: Build First Assistant (Empty State)")}>
                                     <Plus className="w-4 h-4 mr-2" />
                                     Build First Assistant
                                 </Button>
@@ -262,17 +286,32 @@ export default function Dashboard() {
                                             </div>
                                             <div className="mt-3">
                                                 <CardTitle className="text-base font-semibold">{assistant.name}</CardTitle>
-                                                <CardDescription className="mt-1 flex items-center gap-1.5">
-                                                    <Key className="w-3 h-3" />
-                                                    <code className="text-xs font-mono">{assistant.accessKey}</code>
-                                                </CardDescription>
+                                                <div className="text-sm text-muted-foreground mt-1 flex items-center justify-between">
+                                                    <div className="flex items-center gap-1.5 overflow-hidden">
+                                                        <Key className="w-3 h-3 flex-shrink-0" />
+                                                        <code className="text-xs font-mono truncate">
+                                                            {showKeys[assistant.id] ? assistant.accessKey : assistant.accessKey.replace(/.(?=.{4})/g, "•")}
+                                                        </code>
+                                                    </div>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-6 w-6 text-muted-foreground"
+                                                        onClick={() => toggleKeyVisibility(assistant.id)}
+                                                        suppressHydrationWarning
+                                                    >
+                                                        {showKeys[assistant.id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                                                    </Button>
+                                                </div>
                                             </div>
                                         </CardHeader>
 
                                         <CardContent className="pb-3 flex-grow">
                                             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                                 <Calendar className="w-3 h-3" />
-                                                <span>Created {new Date(assistant.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                                                <span suppressHydrationWarning>
+                                                    Created {mounted ? new Date(assistant.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "..."}
+                                                </span>
                                             </div>
                                         </CardContent>
 
@@ -281,20 +320,30 @@ export default function Dashboard() {
                                                 variant="ghost"
                                                 size="sm"
                                                 className="w-full justify-start text-muted-foreground hover:text-foreground"
-                                                onClick={() => setSelectedAssistant({ id: assistant.id, name: assistant.name })}
+                                                onClick={() => {
+                                                    console.log("Button Click: Manage Connections", assistant.name);
+                                                    setSelectedAssistant({ id: assistant.id, name: assistant.name });
+                                                }}
                                             >
                                                 <Link2 className="w-4 h-4 mr-2" />
                                                 Manage Connections
                                             </Button>
-                                            <Link href={`/chat?key=${assistant.accessKey}`} className="w-full">
-                                                <Button className="w-full justify-between" size="sm">
-                                                    <span className="flex items-center gap-2">
-                                                        <MessageSquare className="w-4 h-4" />
-                                                        Open Chat
-                                                    </span>
-                                                    <ChevronRight className="w-4 h-4" />
-                                                </Button>
-                                            </Link>
+                                            <Button
+                                                className="w-full justify-between"
+                                                size="sm"
+                                                onClick={() => {
+                                                    console.log("Button Click: Open Chat", assistant.name);
+                                                    setUnlockingAssistant(assistant);
+                                                    setUnlockInput("");
+                                                    setUnlockError(false);
+                                                }}
+                                            >
+                                                <span className="flex items-center gap-2">
+                                                    <MessageSquare className="w-4 h-4" />
+                                                    Open Chat
+                                                </span>
+                                                <ChevronRight className="w-4 h-4" />
+                                            </Button>
                                         </CardFooter>
                                     </Card>
                                 </motion.div>
@@ -307,7 +356,7 @@ export default function Dashboard() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.3, delay: filteredAssistants.length * 0.05 }}
                         >
-                            <Link href="/build" className="block h-full">
+                            <Link href="/build" className="block h-full" onClick={() => console.log("Button Click: New Assistant Card")}>
                                 <div className="h-full min-h-[220px] flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border hover:border-primary/40 hover:bg-primary/2 transition-all cursor-pointer group p-6">
                                     <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center mb-3 group-hover:bg-primary/10 transition-colors">
                                         <Plus className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -322,6 +371,82 @@ export default function Dashboard() {
                 )}
             </main>
 
+            {/* Unlock Modal */}
+            <AnimatePresence>
+                {unlockingAssistant && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+                            onClick={() => setUnlockingAssistant(null)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                            className="relative w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl p-6"
+                        >
+                            <div className="flex flex-col items-center text-center mb-6">
+                                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                                    <Lock className="w-6 h-6 text-primary" />
+                                </div>
+                                <h3 className="text-lg font-bold">Unlock {unlockingAssistant.name}</h3>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    Enter the access key to verify your identity.
+                                </p>
+                            </div>
+
+                            <form onSubmit={handleUnlockSubmit} className="space-y-4">
+                                <div className="space-y-2">
+                                    <Input
+                                        type="password"
+                                        placeholder="Paste access key here..."
+                                        value={unlockInput}
+                                        onChange={(e) => {
+                                            setUnlockInput(e.target.value);
+                                            setUnlockError(false);
+                                        }}
+                                        className={cn(
+                                            "text-center font-mono tracking-widest h-12",
+                                            unlockError && "border-destructive ring-destructive/20 animate-shake"
+                                        )}
+                                        suppressHydrationWarning
+                                    />
+                                    {unlockError && (
+                                        <p className="text-xs text-destructive text-center font-medium">
+                                            Incorrect key. Please try again.
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="flex gap-2 pt-2">
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        className="flex-1"
+                                        onClick={() => {
+                                            console.log("Button Click: Cancel Unlock Modal");
+                                            setUnlockingAssistant(null);
+                                        }}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        className="flex-1"
+                                        disabled={!unlockInput.trim()}
+                                        suppressHydrationWarning
+                                    >
+                                        Verify & Enter
+                                    </Button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
             {/* Connections modal */}
             {selectedAssistant && (
                 <ManageConnections

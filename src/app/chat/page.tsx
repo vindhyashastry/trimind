@@ -118,6 +118,7 @@ function ChatContent() {
     };
 
     const handleAuthorize = async (keyToUse?: string) => {
+        console.log("Button Click: Unlock Session (Chat)");
         const k = keyToUse || keyInput;
         if (!k.startsWith("DPA-")) {
             setKeyError("Invalid key. Keys must start with DPA-");
@@ -152,6 +153,7 @@ function ChatContent() {
     }, []);
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        console.log("Button Click: Attach Files");
         const files = Array.from(e.target.files || []);
         if (files.length === 0) return;
         setIsUploading(true);
@@ -171,6 +173,7 @@ function ChatContent() {
     };
 
     const handleCompare = async () => {
+        console.log("Button Click: Compare Documents", selectedDocs);
         if (selectedDocs.length !== 2) return;
         setIsChatLoading(true);
         try {
@@ -195,6 +198,7 @@ function ChatContent() {
     };
 
     const handleDeleteDoc = async (id: string) => {
+        console.log("Button Click: Delete Document", id);
         if (!confirm("Are you sure you want to delete this document? All its indexed data will be removed.")) return;
         try {
             const res = await fetch(`/api/documents?id=${id}&accessKey=${accessKey}`, { method: "DELETE" });
@@ -207,6 +211,7 @@ function ChatContent() {
     };
 
     const sendMessage = async (overrideInput?: string) => {
+        console.log("Button Click: Send Message", overrideInput ? "(Quick Action)" : "");
         const textToSend = overrideInput || input;
         if (!textToSend.trim()) return;
 
@@ -266,11 +271,13 @@ function ChatContent() {
     };
 
     const copyChat = () => {
+        console.log("Button Click: Copy Chat");
         const text = messages.map(m => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`).join("\n\n");
         copyToClipboard(text, "chat");
     };
 
     const summarizeChat = () => {
+        console.log("Button Click: Summarize Chat");
         if (messages.length < 2) return;
         sendMessage("Please provide a concise professional summary of our conversation so far, highlighting key findings and conclusions.");
     };
@@ -318,11 +325,12 @@ function ChatContent() {
                             onChange={(e) => { setKeyInput(e.target.value.toUpperCase()); setKeyError(""); }}
                             onKeyDown={(e) => e.key === "Enter" && handleAuthorize()}
                             className={cn("h-12 text-center text-base font-mono tracking-widest", keyError && "border-destructive")}
+                            suppressHydrationWarning
                         />
                         {keyError && (
                             <p className="text-xs text-destructive">{keyError}</p>
                         )}
-                        <Button className="w-full h-10" onClick={() => handleAuthorize()}>
+                        <Button className="w-full h-10" onClick={() => handleAuthorize()} suppressHydrationWarning>
                             Unlock Session
                         </Button>
                         <div className="text-center">
@@ -367,7 +375,10 @@ function ChatContent() {
                         </p>
                         <div className="space-y-1">
                             <button
-                                onClick={() => setResponseMode("strict")}
+                                onClick={() => {
+                                    console.log("Button Click: Switch Mode (Strict)");
+                                    setResponseMode("strict");
+                                }}
                                 className={cn(
                                     "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-all text-sm",
                                     responseMode === "strict"
@@ -384,7 +395,10 @@ function ChatContent() {
                                 </div>
                             </button>
                             <button
-                                onClick={() => setResponseMode("hybrid")}
+                                onClick={() => {
+                                    console.log("Button Click: Switch Mode (Hybrid)");
+                                    setResponseMode("hybrid");
+                                }}
                                 className={cn(
                                     "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-all text-sm",
                                     responseMode === "hybrid"
@@ -407,9 +421,9 @@ function ChatContent() {
 
                     {/* Documents */}
                     <div>
-                        <button
+                        <div
                             onClick={() => setShowDocs(!showDocs)}
-                            className="w-full flex items-center justify-between px-1 mb-2 hover:opacity-80"
+                            className="w-full flex items-center justify-between px-1 mb-2 hover:opacity-80 cursor-pointer"
                         >
                             <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                                 Documents {uploadedDocs.length > 0 && `(${uploadedDocs.length})`}
@@ -431,7 +445,7 @@ function ChatContent() {
                                 </button>
                                 {showDocs ? <ChevronUp className="w-3 h-3 text-muted-foreground" /> : <ChevronDown className="w-3 h-3 text-muted-foreground" />}
                             </div>
-                        </button>
+                        </div>
 
                         <AnimatePresence>
                             {showDocs && (

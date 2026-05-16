@@ -39,32 +39,10 @@ async function getCachedEmbeddings(text: string): Promise<number[]> {
         return embeddingCache.get(cacheKey)!;
     }
     
-    try {
-        const ollamaUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
-        const response = await fetch(`${ollamaUrl}/api/embeddings`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                model: process.env.OLLAMA_EMBED_MODEL || "nomic-embed-text",
-                prompt: text
-            }),
-            signal: AbortSignal.timeout(5000)
-        });
-        
-        if (!response.ok) throw new Error("Ollama not available");
-        const data = await response.json();
-        const embedding = data.embedding || [];
-        
-        embeddingCache.set(cacheKey, embedding);
-        setTimeout(() => embeddingCache.delete(cacheKey), 5 * 60 * 1000);
-        
-        return embedding;
-    } catch {
-        // Fallback to TF-IDF embedding
-        const embedding = textEmbedding(text);
-        embeddingCache.set(cacheKey, embedding);
-        return embedding;
-    }
+    // Use the same TF-IDF logic as the worker to ensure matching
+    const embedding = textEmbedding(text);
+    embeddingCache.set(cacheKey, embedding);
+    return embedding;
 }
 
 const CHART_INSTRUCTIONS = `
@@ -120,6 +98,17 @@ export async function POST(req: NextRequest) {
             });
         }
 
+        // Fetch all indexed documents to provide awareness to the AI
+        const allDocs = await prisma.document.findMany({
+            where: { 
+                assistant: { accessKey: { in: authorizedKeys } }, 
+                status: "SUCCESS" 
+            },
+            select: { fileName: true }
+        });
+        const fileNames = Array.from(new Set(allDocs.map(d => d.fileName)));
+        const fileListStr = fileNames.length > 0 ? fileNames.join(", ") : "No documents uploaded yet.";
+
         // 2. Get embedding (with cache)
         const queryEmbedding = await getCachedEmbeddings(message);
         
@@ -144,13 +133,22 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        // Build prompt
+        // Build prompt with document awareness
         const basePrompt = SYSTEM_PROMPTS[domain] || SYSTEM_PROMPTS.general;
+        const awarenessPrompt = `
+You have access to the following uploaded documents: ${fileListStr}
+
+IMPORTANT INSTRUCTIONS:
+1. If the user asks to "summarize the document" and there are MULTIPLE documents available, ask the user WHICH document they would like summarized (e.g., "I see you have ${fileNames.length} documents. Which one would you like me to summarize: ${fileListStr}?").
+2. If the user refers to "the document" and only ONE document is available, assume they mean that one.
+3. If the user asks about documents but your context is empty, explain that you see the files ${fileListStr} but they might not contain matching keywords for their specific query.
+`;
+
         const systemPrompt = matches.length > 0 && responseMode === "strict"
-            ? `${basePrompt}\n\nUse only this context to answer. Be specific and cite sources.\n\n${context}`
+            ? `${basePrompt}\n${awarenessPrompt}\n\nUse only this context to answer. Be specific and cite sources.\n\n${context}`
             : matches.length > 0
-            ? `${basePrompt}\n\nUse this context if relevant:\n${context}`
-            : `${basePrompt}`;
+            ? `${basePrompt}\n${awarenessPrompt}\n\nUse this context if relevant:\n${context}`
+            : `${basePrompt}\n${awarenessPrompt}`;
 
         // Call LLM
         if (!groq) {

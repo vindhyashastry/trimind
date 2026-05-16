@@ -1,9 +1,9 @@
-// We import from the internal lib path to avoid a known bug in pdf-parse@1.1.1's
-// index.js, which tries to readFileSync a test file at module load time when
-// module.parent is null (which is the case in Next.js / bundled environments).
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const pdf = require("pdf-parse/lib/pdf-parse.js");
+// Standard imports
 import * as xlsx from "xlsx";
+// pdf-parse is a CommonJS module with a known issue in some environments.
+// By adding it to serverExternalPackages in next.config.ts, we can use standard require.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const pdf = require("pdf-parse");
 
 export interface ChunkMetadata {
     text: string;
@@ -65,7 +65,6 @@ export function chunkText(text: string, size: number = 1000, overlap: number = 2
     return chunks;
 }
 
-// New function: chunk text with rich metadata for citation verification
 export function chunkTextWithMetadata(
     text: string,
     size: number = 1000,
@@ -73,22 +72,19 @@ export function chunkTextWithMetadata(
     pageNumber?: number
 ): ChunkMetadata[] {
     const chunks: ChunkMetadata[] = [];
-    const contextSize = 150; // Characters of preceding/following context
+    const contextSize = 150;
     let start = 0;
     let chunkIndex = 0;
 
-    // Calculate total chunks first
-    const totalChunks = Math.ceil((text.length - overlap) / (size - overlap));
+    const totalChunks = Math.ceil((text.length - overlap) / (size - overlap)) || 1;
 
     while (start < text.length) {
         const end = Math.min(start + size, text.length);
         const chunkText = text.slice(start, end);
 
-        // Get preceding context (up to 150 chars before this chunk)
         const precedingStart = Math.max(0, start - contextSize);
         const precedingText = text.slice(precedingStart, start);
 
-        // Get following context (up to 150 chars after this chunk)
         const followingEnd = Math.min(text.length, end + contextSize);
         const followingText = text.slice(end, followingEnd);
 
@@ -103,6 +99,7 @@ export function chunkTextWithMetadata(
             endOffset: end
         });
 
+        if (end === text.length) break;
         start = end - overlap;
         chunkIndex++;
     }
@@ -110,24 +107,18 @@ export function chunkTextWithMetadata(
     return chunks;
 }
 
-// Helper to find which page a chunk belongs to
 export function findPageForChunk(
     chunkStart: number,
     chunkEnd: number,
     pages: { text: string, pageNumber: number }[]
 ): number | undefined {
     let currentOffset = 0;
-
     for (const page of pages) {
         const pageEnd = currentOffset + page.text.length;
-
-        // Check if chunk starts in this page
         if (chunkStart >= currentOffset && chunkStart < pageEnd) {
             return page.pageNumber;
         }
-
         currentOffset = pageEnd;
     }
-
     return undefined;
 }
