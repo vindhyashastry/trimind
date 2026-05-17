@@ -30,6 +30,7 @@ export default function LandingPage() {
   const [user, setUser] = useState<any>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const router = useRouter();
+  const [activeSection, setActiveSection] = useState("home");
 
   useEffect(() => {
     async function checkAuth() {
@@ -40,6 +41,28 @@ export default function LandingPage() {
       } catch {}
     }
     checkAuth();
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY + 120; // offset for sticky nav
+
+      const homeSection = document.getElementById("home");
+      const featuresSection = document.getElementById("features");
+      const securitySection = document.getElementById("security");
+
+      if (securitySection && scrollPosition >= securitySection.offsetTop) {
+        setActiveSection("security");
+      } else if (featuresSection && scrollPosition >= featuresSection.offsetTop) {
+        setActiveSection("features");
+      } else {
+        setActiveSection("home");
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    handleScroll(); // Run once initially
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const handleLogout = async () => {
@@ -126,68 +149,85 @@ export default function LandingPage() {
     },
   ];
 
+  const navLinks = [
+    { id: "home", label: "Home", href: "#home" },
+    { id: "features", label: "Features", href: "#features" },
+    { id: "security", label: "Security", href: "#security" },
+  ];
+
   return (
     <div className="min-h-screen page-bg">
       {/* Navbar */}
-      <nav className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/80 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav className="sticky top-4 z-50 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full rounded-2xl border border-blue-500/15 bg-white/60 dark:bg-zinc-950/60 backdrop-blur-xl shadow-[0_8px_32px_0_rgba(59,130,246,0.06)] px-6">
           <div className="flex h-16 items-center justify-between">
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-sm">
-                <Zap className="w-4 h-4 text-white fill-current" />
-              </div>
-              <span className="text-lg font-bold tracking-tight text-foreground">
+            {/* Minimalist Typographic Logo (No Emblem) */}
+            <Link href="/" className="flex items-center">
+              <span className="text-xl font-black tracking-tight text-foreground font-sans hover:opacity-85 transition-opacity">
                 Tri mind
               </span>
             </Link>
 
-            {/* Desktop nav */}
+            {/* Desktop glassy nav */}
             <div className="hidden md:flex items-center gap-6">
-              <Link
-                href="#features"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Features
-              </Link>
-              <Link
-                href="#security"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Security
-              </Link>
+              <div className="flex items-center bg-blue-500/[0.03] border border-blue-500/5 p-1 rounded-full">
+                {navLinks.map((link) => {
+                  const isActive = activeSection === link.id;
+                  return (
+                    <Link
+                      key={link.id}
+                      href={link.href}
+                      className={cn(
+                        "relative px-4 py-1.5 text-xs font-semibold tracking-wide uppercase transition-colors duration-200 rounded-full",
+                        isActive ? "text-blue-700 font-bold" : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {isActive && (
+                        <motion.span
+                          layoutId="active-pill"
+                          className="absolute inset-0 bg-blue-500/10 border border-blue-500/20 rounded-full"
+                          transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                        />
+                      )}
+                      <span className="relative z-10">{link.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+
               <Link
                 href="/dashboard"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                className="text-xs font-semibold tracking-wide uppercase text-muted-foreground hover:text-foreground transition-colors"
               >
                 Dashboard
               </Link>
-              <Separator orientation="vertical" className="h-4" />
+
+              <Separator orientation="vertical" className="h-4 bg-blue-500/15" />
               {user ? (
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary border border-border text-sm">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/[0.03] border border-blue-500/15 text-xs">
                     <User className="w-3.5 h-3.5 text-muted-foreground" />
                     <span className="text-foreground font-medium max-w-[140px] truncate">
                       {user.email}
                     </span>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={handleLogout}>
+                  <Button variant="ghost" size="sm" onClick={handleLogout} className="text-xs">
                     <LogOut className="w-4 h-4 mr-1.5" />
                     Logout
                   </Button>
                   <Link href="/dashboard">
-                    <Button size="sm">Dashboard</Button>
+                    <Button size="sm" className="rounded-full text-xs">Dashboard</Button>
                   </Link>
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
                   <Link href="/login">
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" className="text-xs rounded-full">
                       Log in
                     </Button>
                   </Link>
                   <Link href="/build">
-                    <Button size="sm">
+                    <Button size="sm" className="text-xs rounded-full shadow-lg shadow-blue-500/10">
                       Get Started
                       <ArrowRight className="ml-1.5 w-3.5 h-3.5" />
                     </Button>
@@ -212,20 +252,21 @@ export default function LandingPage() {
 
         {/* Mobile menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-border bg-background px-4 py-4 space-y-3">
-            <Link href="#features" className="block text-sm text-muted-foreground hover:text-foreground py-1">Features</Link>
-            <Link href="#security" className="block text-sm text-muted-foreground hover:text-foreground py-1">Security</Link>
+          <div className="md:hidden mt-2 border border-blue-500/15 bg-white/90 backdrop-blur-xl rounded-2xl px-4 py-4 space-y-3 shadow-lg">
+            <Link href="#home" className="block text-sm text-muted-foreground hover:text-foreground py-1" onClick={() => setMobileMenuOpen(false)}>Home</Link>
+            <Link href="#features" className="block text-sm text-muted-foreground hover:text-foreground py-1" onClick={() => setMobileMenuOpen(false)}>Features</Link>
+            <Link href="#security" className="block text-sm text-muted-foreground hover:text-foreground py-1" onClick={() => setMobileMenuOpen(false)}>Security</Link>
             <Link href="/dashboard" className="block text-sm text-muted-foreground hover:text-foreground py-1">Dashboard</Link>
-            <Separator />
+            <Separator className="bg-blue-500/15" />
             {user ? (
               <div className="flex flex-col gap-2 pt-2">
                 <span className="text-sm text-muted-foreground">{user.email}</span>
-                <Button variant="outline" size="sm" onClick={handleLogout} className="w-full">Logout</Button>
+                <Button variant="outline" size="sm" onClick={handleLogout} className="w-full rounded-full">Logout</Button>
               </div>
             ) : (
               <div className="flex flex-col gap-2 pt-2">
-                <Link href="/login"><Button variant="outline" size="sm" className="w-full">Log in</Button></Link>
-                <Link href="/build"><Button size="sm" className="w-full">Get Started</Button></Link>
+                <Link href="/login"><Button variant="outline" size="sm" className="w-full rounded-full">Log in</Button></Link>
+                <Link href="/build"><Button size="sm" className="w-full rounded-full">Get Started</Button></Link>
               </div>
             )}
           </div>
@@ -233,7 +274,7 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero */}
-      <section className="relative overflow-hidden pt-20 pb-16 px-4 sm:px-6 lg:px-8">
+      <section id="home" className="relative overflow-hidden pt-20 pb-16 px-4 sm:px-6 lg:px-8">
         {/* Decorative blobs */}
         <div className="absolute top-0 left-1/4 w-72 h-72 bg-primary/8 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 right-1/4 w-72 h-72 bg-legal-primary/6 rounded-full blur-3xl pointer-events-none" />

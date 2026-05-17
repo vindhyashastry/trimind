@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { AuroraBackground } from "@/components/ui/aurora-background";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -22,12 +23,12 @@ export default function RootLayout({
           inter.variable,
           "font-sans antialiased min-h-screen"
         )}
-        style={{
-          backgroundColor: "hsl(0 0% 99%)",
-          color: "hsl(222 47% 11%)",
-        }}
       >
-        {children}
+        <AuroraBackground className="w-full min-h-screen flex flex-col justify-start items-stretch bg-zinc-50/50">
+          <div className="relative z-10 flex-1 flex flex-col min-h-screen">
+            {children}
+          </div>
+        </AuroraBackground>
       </body>
     </html>
   );

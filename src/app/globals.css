@@ -42,12 +42,34 @@
   --color-general-light: hsl(142 71% 95%);
 
   --radius: 0.625rem;
+
+  --animate-aurora: aurora 60s linear infinite;
+
+  @keyframes aurora {
+    from {
+      background-position: 50% 50%, 50% 50%;
+    }
+    to {
+      background-position: 350% 50%, 350% 50%;
+    }
+  }
+}
+
+:root {
+  --white: #ffffff;
+  --black: #000000;
+  --transparent: transparent;
+  --blue-500: #3b82f6;
+  --blue-300: #93c5fd;
+  --blue-400: #60a5fa;
+  --indigo-300: #a5b4fc;
+  --violet-200: #ddd6fe;
 }
 
 /* Force light background/text on html and body regardless of OS preference */
 html,
 body {
-  background-color: hsl(0 0% 99%) !important;
+  background-color: transparent !important;
   color: hsl(222 47% 11%) !important;
   color-scheme: light !important;
 }
@@ -74,11 +96,7 @@ body {
 
 /* Subtle page gradient background */
 .page-bg {
-  background-color: hsl(0 0% 99%);
-  background-image:
-    radial-gradient(at 27% 37%, hsla(215, 98%, 61%, 0.04) 0px, transparent 50%),
-    radial-gradient(at 97% 21%, hsla(262, 83%, 58%, 0.04) 0px, transparent 50%),
-    radial-gradient(at 52% 99%, hsla(199, 89%, 48%, 0.04) 0px, transparent 50%);
+  background-color: transparent !important;
 }
 
 /* Card elevation utilities */

@@ -34,6 +34,20 @@
       "passwordHash": "1d04ad6007421525cf2900eca1360800:a303f929e0ec139c159330bce35ccbb73151fc2a64d71e63b4a74cc5414a5dbb607ae2dd1604d513fe442bcfee2ef7fa5d80a9e77bfcc6a9fde6eaba42b2fcbe",
       "name": "sandesh devaiah pp",
       "createdAt": "2026-05-16T11:08:42.546Z"
+    },
+    {
+      "id": "bT8xYHNOgTZynecWJwRy1",
+      "email": "vini@gmail.com",
+      "passwordHash": "27bbceb51d2b40f4c1c4cc831aef5449:ab051b4af1647c8863e0313c4266ce0bfbc39923dec808a4a3b427e2dd55225bd9ac6fb4b34bc653d32e8df37ea2d12c4da19e95833501a493cfd8ca6499bcd0",
+      "name": "vin",
+      "createdAt": "2026-05-17T11:08:08.711Z"
+    },
+    {
+      "id": "Ry6y8K0M6RvWm3ApGIvb1",
+      "email": "testuser@example.com",
+      "passwordHash": "11abf7c32f2722ae4298a02224d2ec0c:c83158cdec48062ba49669eac6cebc138fd8dc73ded0cd58ddb444cbe270a54d0250629f22afd6a46cbbc5422bb704db8ebdfbca6b85db98a9ab0488805a041d",
+      "name": "Test User",
+      "createdAt": "2026-05-17T14:58:39.281Z"
     }
   ],
   "assistants": []

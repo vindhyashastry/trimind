@@ -1,52 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import Groq from "groq-sdk";
-import { queryNamespace } from "@/lib/vector-store";
+import { queryNamespace, getEmbeddings } from "@/lib/vector-store";
 import prisma from "@/lib/prisma";
 
 const groq = process.env.GROQ_API_KEY ? new Groq({ apiKey: process.env.GROQ_API_KEY }) : null;
 
-// TF-IDF style embedding - must match exactly what worker stores
-function textEmbedding(text: string, dimensions: number = 384): number[] {
-    const words = text.toLowerCase()
-        .replace(/[^a-z0-9\s]/g, " ")
-        .split(/\s+/)
-        .filter(w => w.length > 2);
-
-    const freq: Record<string, number> = {};
-    words.forEach(w => { freq[w] = (freq[w] || 0) + 1; });
-
-    const embedding = new Array(dimensions).fill(0);
-    Object.entries(freq).forEach(([word, count]) => {
-        let hash = 0;
-        for (let i = 0; i < word.length; i++) {
-            hash = ((hash << 5) - hash) + word.charCodeAt(i);
-            hash = hash & hash;
-        }
-        const idx = Math.abs(hash) % dimensions;
-        embedding[idx] += count / words.length;
-    });
-
-    const magnitude = Math.sqrt(embedding.reduce((sum, v) => sum + v * v, 0)) || 1;
-    return embedding.map(v => v / magnitude);
-}
-
-// Simple in-memory cache for embeddings
-const embeddingCache = new Map<string, number[]>();
-
-async function getCachedEmbeddings(text: string): Promise<number[]> {
-    const cacheKey = text.slice(0, 100);
-    if (embeddingCache.has(cacheKey)) {
-        return embeddingCache.get(cacheKey)!;
-    }
-    
-    // Use the same TF-IDF logic as the worker to ensure matching
-    const embedding = textEmbedding(text);
-    embeddingCache.set(cacheKey, embedding);
-    return embedding;
-}
-
 const CHART_INSTRUCTIONS = `
-When asked to create a chart/graph/visualization, respond ONLY with a JSON code block. 
+The user has explicitly requested a chart/graph/visualization. Respond ONLY with a JSON code block.
 DO NOT include any citations (like [Source 1]), explanations, or text outside the code block.
 The JSON must follow this exact schema:
 \`\`\`json
@@ -64,10 +24,21 @@ The JSON must follow this exact schema:
 \`\`\`
 `;
 
+// Keywords that indicate the user explicitly wants a chart
+const CHART_KEYWORDS = [
+    "chart", "graph", "plot", "visualize", "visualization",
+    "pie chart", "bar chart", "line chart", "bar graph", "pie graph"
+];
+
+function userWantsChart(message: string): boolean {
+    const lower = message.toLowerCase();
+    return CHART_KEYWORDS.some(kw => lower.includes(kw));
+}
+
 const SYSTEM_PROMPTS: Record<string, string> = {
-    finance: `You are a Finance Assistant. Answer questions about financial documents, balance sheets, and budgets. Be concise. ${CHART_INSTRUCTIONS}`,
-    legal: `You are a Legal Assistant. Answer questions about contracts, compliance, and legal documents. Be concise. ${CHART_INSTRUCTIONS}`,
-    general: `You are a helpful assistant. Be concise. ${CHART_INSTRUCTIONS}`
+    finance: `You are a Finance Assistant. Answer questions about financial documents, balance sheets, and budgets. Be concise and factual. Do NOT generate charts or JSON visualizations unless the user explicitly asks for one.`,
+    legal: `You are a Legal Assistant. Answer questions about contracts, compliance, and legal documents. Be concise and factual. Do NOT generate charts or JSON visualizations unless the user explicitly asks for one.`,
+    general: `You are a helpful assistant. Be concise and factual. Do NOT generate charts or JSON visualizations unless the user explicitly asks for one.`
 };
 
 export async function POST(req: NextRequest) {
@@ -98,19 +69,25 @@ export async function POST(req: NextRequest) {
             });
         }
 
-        // Fetch all indexed documents to provide awareness to the AI
+        // Fetch all indexed documents — split by own vs connected domain
         const allDocs = await prisma.document.findMany({
             where: { 
                 assistant: { accessKey: { in: authorizedKeys } }, 
                 status: "SUCCESS" 
             },
-            select: { fileName: true }
+            select: { fileName: true, assistant: { select: { accessKey: true } } }
         });
+        const ownFileNames = Array.from(new Set(
+            allDocs.filter(d => d.assistant?.accessKey === accessKey).map(d => d.fileName)
+        ));
+        const connectedFileNames = Array.from(new Set(
+            allDocs.filter(d => d.assistant?.accessKey !== accessKey).map(d => d.fileName)
+        ));
         const fileNames = Array.from(new Set(allDocs.map(d => d.fileName)));
         const fileListStr = fileNames.length > 0 ? fileNames.join(", ") : "No documents uploaded yet.";
 
-        // 2. Get embedding (with cache)
-        const queryEmbedding = await getCachedEmbeddings(message);
+        // 2. Get high-quality Ollama embedding
+        const queryEmbedding = await getEmbeddings(message);
         
         // 3. Search documents across all authorized namespaces
         let matches: any[] = [];
@@ -120,45 +97,63 @@ export async function POST(req: NextRequest) {
         
         if (queryEmbedding.length > 0) {
             matches = await queryNamespace(queryEmbedding, { accessKey: authorizedKeys }, 10, message) || [];
+        }
+        
+        // 4. If vector search returned nothing but we know there are connected files,
+        //    fall back to pure keyword search so cross-domain chunks are never silently lost
+        if (matches.length === 0 && authorizedKeys.length > 1) {
+            matches = await queryNamespace([], { accessKey: authorizedKeys }, 10, message) || [];
+        }
+
+        if (matches.length > 0) {
+            context = matches.map((m: any) => {
+                if (m.metadata?.accessKey !== accessKey) crossDomainUsed = true;
+                return `[${m.metadata?.fileName || "doc"}${m.metadata?.pageNumber ? ` p.${m.metadata.pageNumber}` : ""}]: ${m.metadata?.text?.slice(0, 500)}`;
+            }).join("\n\n");
             
-            if (matches.length > 0) {
-                context = matches.map((m: any, i: number) => {
-                    if (m.metadata?.accessKey !== accessKey) crossDomainUsed = true;
-                    return `[${m.metadata?.fileName || "doc"}${m.metadata?.pageNumber ? ` p.${m.metadata.pageNumber}` : ""}]: ${m.metadata?.text?.slice(0, 500)}`;
-                }).join("\n\n");
-                
-                sources = Array.from(new Set(matches.map((m: any) => 
-                    `${m.metadata?.fileName}${m.metadata?.pageNumber ? ` (p.${m.metadata.pageNumber})` : ""}`
-                ))).join(", ");
-            }
+            sources = Array.from(new Set(matches.map((m: any) => 
+                `${m.metadata?.fileName}${m.metadata?.pageNumber ? ` (p.${m.metadata.pageNumber})` : ""}`
+            ))).join(", ");
         }
 
         // Build prompt with document awareness
         const basePrompt = SYSTEM_PROMPTS[domain] || SYSTEM_PROMPTS.general;
+        
+        // Only append chart instructions if the user explicitly requested a chart
+        const chartSection = userWantsChart(message) ? `\n${CHART_INSTRUCTIONS}` : "";
+        
+        const connectedSection = connectedFileNames.length > 0
+            ? `\nYou also have READ ACCESS to documents from a connected domain: ${connectedFileNames.join(", ")}. These are fully available to answer questions about.`
+            : "";
+
         const awarenessPrompt = `
-You have access to the following uploaded documents: ${fileListStr}
+You have access to the following documents from this assistant: ${ownFileNames.length > 0 ? ownFileNames.join(", ") : "none"}${connectedSection}
 
 IMPORTANT INSTRUCTIONS:
-1. If the user asks to "summarize the document" and there are MULTIPLE documents available, ask the user WHICH document they would like summarized (e.g., "I see you have ${fileNames.length} documents. Which one would you like me to summarize: ${fileListStr}?").
-2. If the user refers to "the document" and only ONE document is available, assume they mean that one.
-3. If the user asks about documents but your context is empty, explain that you see the files ${fileListStr} but they might not contain matching keywords for their specific query.
+1. All documents listed above — both own and connected — are FULLY accessible to you. Never say you lack access to them.
+2. If the user asks to "summarize the document" and there are MULTIPLE documents, ask WHICH one: "Which document would you like summarized: ${fileListStr}?"
+3. If the user refers to "the document" and only ONE is available, assume they mean that one.
+4. If context is empty for a specific file, say "I can see ${fileListStr} are available but couldn't retrieve matching content — try rephrasing your question."
 `;
 
         const systemPrompt = matches.length > 0 && responseMode === "strict"
-            ? `${basePrompt}\n${awarenessPrompt}\n\nUse only this context to answer. Be specific and cite sources.\n\n${context}`
+            ? `${basePrompt}${chartSection}\n${awarenessPrompt}\n\nUse only this context to answer. Be specific and cite sources.\n\n${context}`
             : matches.length > 0
-            ? `${basePrompt}\n${awarenessPrompt}\n\nUse this context if relevant:\n${context}`
-            : `${basePrompt}\n${awarenessPrompt}`;
+            ? `${basePrompt}${chartSection}\n${awarenessPrompt}\n\nUse this context if relevant:\n${context}`
+            : `${basePrompt}${chartSection}\n${awarenessPrompt}`;
 
         // Call LLM
         if (!groq) {
             // Local fallback
             try {
-                const response = await fetch(`${process.env.OLLAMA_BASE_URL || "http://localhost:11434"}/api/chat`, {
+                const ollamaUrl = `${process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434"}/api/chat`;
+                const model = process.env.OLLAMA_CHAT_MODEL || "qwen2.5:3b";
+                
+                const response = await fetch(ollamaUrl, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        model: process.env.OLLAMA_CHAT_MODEL || "qwen2.5:0.5b",
+                        model: model,
                         messages: [
                             { role: "system", content: systemPrompt },
                             ...(history || []).slice(-3).map((m: any) => ({
@@ -169,9 +164,14 @@ IMPORTANT INSTRUCTIONS:
                         ],
                         stream: false
                     }),
-                    signal: AbortSignal.timeout(30000)
+                    signal: AbortSignal.timeout(60000) // Increased to 60s for 3B model
                 });
                 
+                if (!response.ok) {
+                    const errText = await response.text();
+                    throw new Error(`Ollama Error (${response.status}): ${errText}`);
+                }
+
                 const data = await response.json();
                 return NextResponse.json({
                     role: "assistant",
@@ -179,13 +179,14 @@ IMPORTANT INSTRUCTIONS:
                     confidence: matches.length > 0 ? 85 : 60,
                     source: sources,
                     crossDomainUsed,
-                    reasoning: `Queried Domains: ${authorizedKeys.join(", ")}`,
+                    reasoning: `Queried Domains: ${authorizedKeys.join(", ")} | Model: ${model}`,
                     time: Date.now() - startTime
                 });
-            } catch {
+            } catch (err: any) {
+                console.error("Ollama fallback error:", err);
                 return NextResponse.json({
                     role: "assistant",
-                    content: "Local LLM unavailable.",
+                    content: `Local LLM unavailable: ${err.message || "Connection refused"}. Is Ollama running?`,
                     confidence: 0,
                     source: ""
                 });

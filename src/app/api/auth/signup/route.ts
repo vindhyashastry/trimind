@@ -3,6 +3,7 @@ import { findUserByEmail, addUser, User } from '@/lib/user-db';
 import { hashPassword, generateToken } from '@/lib/auth-utils';
 import { nanoid } from 'nanoid';
 import { cookies } from 'next/headers';
+import prisma from '@/lib/prisma';
 
 export async function POST(req: Request) {
     try {
@@ -26,6 +27,18 @@ export async function POST(req: Request) {
         };
 
         addUser(newUser);
+
+        // Also sync into Prisma so Assistant FK (userId → User.id) works
+        await prisma.user.upsert({
+            where: { id: newUser.id },
+            create: {
+                id: newUser.id,
+                email: newUser.email,
+                password: newUser.passwordHash,
+                name: newUser.name,
+            },
+            update: {} // already exists, no-op
+        });
 
         const token = generateToken({ userId: newUser.id, email: newUser.email });
 

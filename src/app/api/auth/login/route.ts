@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { findUserByEmail } from '@/lib/user-db';
 import { verifyPassword, generateToken } from '@/lib/auth-utils';
 import { cookies } from 'next/headers';
+import prisma from '@/lib/prisma';
 
 export async function POST(req: Request) {
     try {
@@ -17,6 +18,19 @@ export async function POST(req: Request) {
         }
 
         const token = generateToken({ userId: user.id, email: user.email });
+
+        // Sync into Prisma so FK constraints on Assistant.userId work
+        // (covers users who registered before this fix was applied)
+        await prisma.user.upsert({
+            where: { id: user.id },
+            create: {
+                id: user.id,
+                email: user.email,
+                password: user.passwordHash,
+                name: user.name,
+            },
+            update: {} // already exists, no-op
+        });
 
         // Set cookie
         (await cookies()).set('auth-token', token, {

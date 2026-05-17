@@ -29,7 +29,7 @@ function saveLocalDb(docs: LocalDoc[]) {
 
 export async function getEmbeddings(text: string) {
   // Use pure Ollama for embeddings since Groq doesn't offer embedding models
-  const ollamaBaseUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
+  const ollamaBaseUrl = process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434";
   const model = process.env.OLLAMA_EMBED_MODEL || "nomic-embed-text";
 
   try {
@@ -141,7 +141,8 @@ export async function queryNamespace(
     const docs = getLocalDb();
     const filteredDocs = docs.filter(d => {
       // Must match one of the accessKeys if provided
-      if (accessKeys.length > 0 && accessKeys[0] && !accessKeys.includes(d.metadata.accessKey?.toLowerCase())) {
+      const docAccessKey = (d.metadata.accessKey || "").toLowerCase();
+      if (accessKeys.length > 0 && accessKeys[0] && !accessKeys.includes(docAccessKey)) {
         return false;
       }
       
@@ -154,6 +155,33 @@ export async function queryNamespace(
     });
 
     if (filteredDocs.length === 0) return [];
+
+    // If we have a vector, use Cosine Similarity
+    if (vector && vector.length > 0) {
+      const results = filteredDocs.map(doc => {
+        let score = 0;
+        if (doc.metadata.vector && doc.metadata.vector.length === vector.length) {
+          // Cosine Similarity: (A . B) / (||A|| * ||B||)
+          // Note: Our vectors should be pre-normalized, so just dot product
+          score = vector.reduce((sum, v, i) => sum + v * doc.metadata.vector[i], 0);
+        } else {
+          // Fallback to keyword score if vector missing or mismatched
+          score = calculateKeywordScore(doc, queryText || "");
+        }
+        return { ...doc, score };
+      });
+
+      return results
+        .sort((a, b) => b.score - a.score)
+        .slice(0, topK)
+        .map(s => ({
+          id: s.id,
+          score: s.score,
+          metadata: s.metadata
+        }));
+    }
+
+    // Default to Keyword Search if no vector provided
 
     const VAGUE_PATTERNS = /^(summarize|overview|tell me|what is|what's|what does|show me|list).*(document|file|content|everything|all|this|there|available|say|about)/i;
     if (!queryText || VAGUE_PATTERNS.test(queryText.trim())) {
@@ -211,10 +239,31 @@ export async function queryNamespace(
       .slice(0, topK)
       .map(s => ({
         id: s.id,
-        score: s.score / keywords.length,
+        score: s.score / (keywords.length || 1),
         metadata: s.metadata
       }));
   }
+}
+
+function calculateKeywordScore(doc: any, queryText: string): number {
+  const stopWords = new Set(["the","a","an","is","are","was","were","be","been","being","have","has","had","do","does","did","will","would","could","should","may","might","shall","can","need","dare","ought","used","to","of","in","for","on","with","at","by","from","up","about","into","through","during","before","after","above","below","between","and","or","but","if","then","that","this","these","those","it","its","we","our","they","their","you","your","i","my","me","him","his","her","she","he"]);
+  const keywords = queryText.toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter(k => k.length > 2 && !stopWords.has(k));
+
+  if (keywords.length === 0) return 0;
+
+  const content = ((doc.text || "") + " " + (doc.metadata.fileName || "")).toLowerCase();
+  let score = 0;
+  keywords.forEach(kw => {
+    const exactCount = (content.match(new RegExp(`\\b${kw}\\b`, 'g')) || []).length;
+    score += exactCount * 2;
+    if (content.includes(kw)) score += 1;
+  });
+  const fileName = (doc.metadata.fileName || "").toLowerCase();
+  keywords.forEach(kw => { if (fileName.includes(kw)) score += 3; });
+  return score / keywords.length;
 }
 
 export async function getChunkById(chunkId: string): Promise<{ id: string; metadata: Record<string, any> } | null> {

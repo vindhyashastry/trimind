@@ -164,8 +164,15 @@ function ChatContent() {
             formData.append("accessKey", accessKey);
             formData.append("assistantName", "Attached Knowledge");
             const res = await fetch("/api/upload", { method: "POST", body: formData });
-            if (res.ok) fetchDocuments(accessKey);
-        } catch { }
+            if (res.ok) {
+                fetchDocuments(accessKey);
+            } else {
+                const errorData = await res.json().catch(() => ({ error: "Unknown error" }));
+                alert(`Upload failed (${res.status}): ${errorData.error || "Please check your file size or network connection."}`);
+            }
+        } catch (error: any) {
+            alert(`Network error during upload: ${error.message}`);
+        }
         finally {
             setIsUploading(false);
             if (fileInputRef.current) fileInputRef.current.value = "";

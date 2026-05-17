@@ -1,38 +1,9 @@
 import { NextResponse } from "next/server";
-import { parsePDF, parseExcel, chunkText } from "@/lib/file-parser";
+import { parsePDF, parseExcel, chunkText, cleanText, isMostlyGarbage } from "@/lib/file-parser";
 import { upsertDocumentBatch } from "@/lib/vector-store";
 import { storage } from "@/lib/storage";
 import prisma from "@/lib/prisma";
 import { nanoid } from "nanoid";
-
-// TF-IDF style embedding - captures word frequencies so similar texts get similar vectors
-function textEmbedding(text: string, dimensions: number = 384): number[] {
-    const words = text.toLowerCase()
-        .replace(/[^a-z0-9\s]/g, " ")
-        .split(/\s+/)
-        .filter(w => w.length > 2);
-
-    // Build word frequency map
-    const freq: Record<string, number> = {};
-    words.forEach(w => { freq[w] = (freq[w] || 0) + 1; });
-
-    const embedding = new Array(dimensions).fill(0);
-
-    // Map each word to a dimension slot using stable hash
-    Object.entries(freq).forEach(([word, count]) => {
-        let hash = 0;
-        for (let i = 0; i < word.length; i++) {
-            hash = ((hash << 5) - hash) + word.charCodeAt(i);
-            hash = hash & hash;
-        }
-        const idx = Math.abs(hash) % dimensions;
-        embedding[idx] += count / words.length; // TF score
-    });
-
-    // Normalize
-    const magnitude = Math.sqrt(embedding.reduce((sum, v) => sum + v * v, 0)) || 1;
-    return embedding.map(v => v / magnitude);
-}
 
 export async function POST(req: Request) {
     let documentId: string | null = null;
@@ -70,7 +41,8 @@ export async function POST(req: Request) {
         } else if (originalName.endsWith(".xlsx") || originalName.endsWith(".xls")) {
             text = await parseExcel(buffer);
         } else {
-            text = buffer.toString("utf-8");
+            // CSV, TXT, etc. — clean out any stray binary before chunking
+            text = cleanText(buffer.toString("utf-8"));
         }
 
         if (!text.trim()) {
@@ -81,17 +53,24 @@ export async function POST(req: Request) {
         console.log(`[Worker] Chunking...`);
         const chunks = chunkText(text, 800, 100);
 
-        let totalChunks = 0;
+        const { getEmbeddings } = await import("@/lib/vector-store");
         const recordsToUpsert = [];
 
-        console.log(`[Worker] Generating hashes for ${chunks.length} chunks...`);
+        console.log(`[Worker] Generating embeddings for ${chunks.length} chunks via Ollama...`);
+        let skipped = 0;
         for (const chunkText of chunks) {
+            // Skip chunks that are mostly binary noise — don't pollute the vector DB
+            if (isMostlyGarbage(chunkText)) {
+                skipped++;
+                continue;
+            }
+
             const chunkId = nanoid();
-            const embedding = textEmbedding(chunkText);
-            
+            const vector = await getEmbeddings(chunkText);
+
             recordsToUpsert.push({
                 id: chunkId,
-                vector: embedding,
+                vector: vector || [],
                 metadata: {
                     text: chunkText,
                     fileName: originalName,
@@ -100,15 +79,17 @@ export async function POST(req: Request) {
                     accessKey,
                     chunkIndex: recordsToUpsert.length,
                     timestamp: new Date().toISOString(),
-                    parentDocumentId: documentId
+                    parentDocumentId: documentId,
+                    vector: vector || []
                 }
             });
         }
+        if (skipped > 0) console.log(`[Worker] Skipped ${skipped} garbage chunks.`);
 
         // Batch upsert to vector store
         console.log(`[Worker] Saving to Vector Store...`);
         await upsertDocumentBatch(recordsToUpsert);
-        totalChunks = recordsToUpsert.length;
+        const totalChunks = recordsToUpsert.length;
 
         // Mark complete
         await prisma.document.update({
@@ -128,7 +109,7 @@ export async function POST(req: Request) {
                     where: { id: documentId },
                     data: { status: "ERROR", errorMessage: error.message }
                 });
-            } catch {}
+            } catch { }
         }
         return NextResponse.json({ error: "Processing failed" }, { status: 500 });
     }
