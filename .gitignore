@@ -39,4 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-.data
+# debug/scratch work - never commit
+/tmp
+/scratch
+debug_response.html
+*.debug.html
+
+# local data - belt and suspenders, already covered but be explicit
+/.data
