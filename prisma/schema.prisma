@@ -7,8 +7,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -70,4 +71,23 @@ model AssistantRelation {
   target      Assistant @relation("TargetRelations", fields: [targetId], references: [id], onDelete: Cascade)
 
   @@unique([sourceId, targetId])
+}
+
+model VectorChunk {
+  id               String   @id @default(cuid())
+  text             String
+  accessKey        String
+  fileName         String
+  domain           String?
+  assistantName    String?
+  chunkIndex       Int?
+  pageNumber       Int?
+  startLine        Int?
+  endLine          Int?
+  parentDocumentId String?
+  vectorJson       String   // JSON-serialized float[] embedding
+  createdAt        DateTime @default(now())
+
+  @@index([accessKey])
+  @@index([parentDocumentId])
 }

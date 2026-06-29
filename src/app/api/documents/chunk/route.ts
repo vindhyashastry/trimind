@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { getChunkById, getChunksByDocumentId } from "@/lib/vector-store";
 import prisma from "@/lib/prisma";

@@ -90,9 +90,9 @@ function AuthContent() {
                     </div>
                 </div>
 
-                <p className="text-primary-foreground/40 text-sm relative z-10">
+                {/* <p className="text-primary-foreground/40 text-sm relative z-10">
                     © 2026 Tri mind Intelligent Systems
-                </p>
+                </p> */}
             </div>
 
             {/* Right panel — form */}

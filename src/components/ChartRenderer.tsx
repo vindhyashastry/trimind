@@ -5,6 +5,7 @@ import ReactECharts from "echarts-for-react";
 import { toPng, toJpeg } from "html-to-image";
 import { Download, Image as ImageIcon } from "lucide-react";
 import { Button } from "./ui/button";
+import { toast } from "sonner";
 
 interface ChartData {
   type: "pie" | "bar" | "line";
@@ -279,9 +280,10 @@ export const ChartRenderer = React.memo(function ChartRenderer({ json }: { json:
       link.download = `chart-${chartConfig.title?.replace(/\s+/g, "-").toLowerCase() || "export"}-${ts}.${format}`;
       link.href = dataUrl;
       link.click();
+      toast.success("Chart exported successfully!");
     } catch (err) {
       console.error("Export failed:", err);
-      alert("Failed to export image. Please try again.");
+      toast.error("Failed to export image. Please try again.");
     }
   };
 

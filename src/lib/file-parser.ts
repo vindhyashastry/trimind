@@ -1,5 +1,6 @@
 // Standard imports
 import * as xlsx from "xlsx";
+import mammoth from "mammoth";
 // pdf-parse is a CommonJS module with a known issue in some environments.
 // By adding it to serverExternalPackages in next.config.ts, we can use standard require.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -95,6 +96,11 @@ export async function parseExcel(buffer: Buffer): Promise<string> {
         content += xlsx.utils.sheet_to_txt(sheet) + "\n";
     });
     return content;
+}
+
+export async function parseDocx(buffer: Buffer): Promise<string> {
+    const result = await mammoth.extractRawText({ buffer });
+    return result.value || "";
 }
 
 export function chunkText(text: string, size: number = 1000, overlap: number = 200): string[] {

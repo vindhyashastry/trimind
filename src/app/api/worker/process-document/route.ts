@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { parsePDF, parseExcel, chunkText, cleanText, isMostlyGarbage } from "@/lib/file-parser";
+import { parsePDF, parseExcel, parseDocx, chunkText, cleanText, isMostlyGarbage } from "@/lib/file-parser";
 import { upsertDocumentBatch } from "@/lib/vector-store";
 import { storage } from "@/lib/storage";
 import prisma from "@/lib/prisma";
@@ -40,6 +40,13 @@ export async function POST(req: Request) {
             text = result.text;
         } else if (originalName.endsWith(".xlsx") || originalName.endsWith(".xls")) {
             text = await parseExcel(buffer);
+        } else if (originalName.endsWith(".docx") || originalName.endsWith(".doc")) {
+            try {
+                text = await parseDocx(buffer);
+            } catch (err) {
+                console.warn(`[Worker] Docx parsing failed, falling back to text for ${originalName}`);
+                text = cleanText(buffer.toString("utf-8"));
+            }
         } else {
             // CSV, TXT, etc. — clean out any stray binary before chunking
             text = cleanText(buffer.toString("utf-8"));
@@ -51,40 +58,84 @@ export async function POST(req: Request) {
 
         // Chunk text
         console.log(`[Worker] Chunking...`);
-        const chunks = chunkText(text, 800, 100);
-
         const { getEmbeddings } = await import("@/lib/vector-store");
-        const recordsToUpsert = [];
-
-        console.log(`[Worker] Generating embeddings for ${chunks.length} chunks via Ollama...`);
+        const rawChunks = [];
+        
+        let start = 0;
+        const size = 800;
+        const overlap = 100;
         let skipped = 0;
-        for (const chunkText of chunks) {
+        let currentLine = 1;
+        let lastScannedIndex = 0;
+
+        while (start < text.length) {
+            const end = Math.min(start + size, text.length);
+            const chunkText = text.slice(start, end);
+
             // Skip chunks that are mostly binary noise — don't pollute the vector DB
             if (isMostlyGarbage(chunkText)) {
                 skipped++;
+                start += size - overlap;
                 continue;
             }
 
-            const chunkId = nanoid();
-            const vector = await getEmbeddings(chunkText);
+            // Efficiently count lines up to `start`
+            for (let i = lastScannedIndex; i < start; i++) {
+                if (text[i] === '\n') currentLine++;
+            }
+            lastScannedIndex = start;
+            const startLine = currentLine;
 
-            recordsToUpsert.push({
-                id: chunkId,
-                vector: vector || [],
-                metadata: {
-                    text: chunkText,
-                    fileName: originalName,
-                    domain,
-                    assistantName,
-                    accessKey,
-                    chunkIndex: recordsToUpsert.length,
-                    timestamp: new Date().toISOString(),
-                    parentDocumentId: documentId,
-                    vector: vector || []
-                }
+            // Count lines within the chunk to find `endLine`
+            let endLine = startLine;
+            for (let i = start; i < end; i++) {
+                if (text[i] === '\n') endLine++;
+            }
+
+            rawChunks.push({
+                chunkText,
+                startLine,
+                endLine
             });
+
+            if (end === text.length) break;
+            start += size - overlap;
         }
         if (skipped > 0) console.log(`[Worker] Skipped ${skipped} garbage chunks.`);
+
+        const recordsToUpsert: Array<{ id: string, vector: number[], metadata: Record<string, any> }> = [];
+        const CONCURRENCY = 5;
+
+        // Process embeddings in parallel batches
+        console.log(`[Worker] Generating embeddings for ${rawChunks.length} chunks...`);
+        for (let i = 0; i < rawChunks.length; i += CONCURRENCY) {
+            console.log(`[Worker] Processing batch ${Math.floor(i / CONCURRENCY) + 1} / ${Math.ceil(rawChunks.length / CONCURRENCY)}...`);
+            const batch = rawChunks.slice(i, i + CONCURRENCY);
+            const embeddings = await Promise.all(batch.map(c => getEmbeddings(c.chunkText)));
+
+            batch.forEach((c, idx) => {
+                const vector = embeddings[idx] || [];
+                const chunkId = nanoid();
+                
+                recordsToUpsert.push({
+                    id: chunkId,
+                    vector,
+                    metadata: {
+                        text: c.chunkText,
+                        fileName: originalName,
+                        domain,
+                        assistantName,
+                        accessKey,
+                        chunkIndex: i + idx,
+                        timestamp: new Date().toISOString(),
+                        parentDocumentId: documentId,
+                        startLine: c.startLine,
+                        endLine: c.endLine,
+                        vector
+                    }
+                });
+            });
+        }
 
         // Batch upsert to vector store
         console.log(`[Worker] Saving to Vector Store...`);

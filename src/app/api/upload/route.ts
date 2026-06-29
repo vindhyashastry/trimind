@@ -33,9 +33,8 @@ export async function POST(req: NextRequest) {
                 return NextResponse.json({ error: "Assistant not found. Login required to create new assistants." }, { status: 401 });
             }
 
-            // Verify the user exists in the same store that signup/login uses (user-db.json)
-            // NOT Prisma — auth is file-based, not DB-based
-            const userExists = findUserById(payload.userId);
+            // Verify the user exists in the database
+            const userExists = await findUserById(payload.userId);
             if (!userExists) {
                 return NextResponse.json({ error: "Session stale. Please log out and log back in." }, { status: 403 });
             }
@@ -92,8 +91,12 @@ export async function POST(req: NextRequest) {
             });
 
             // Fire and forget the background processing task
-            // Using a local fallback for the baseUrl to ensure the server can call itself even through ngrok tunnels
-            const baseUrl = req.nextUrl.origin.includes('ngrok') ? 'http://localhost:3000' : req.nextUrl.origin;
+            // Ensure we use http instead of https for local background worker calls to prevent ERR_SSL_WRONG_VERSION_NUMBER
+            let baseUrl = req.nextUrl.origin;
+            if (baseUrl.includes('ngrok') || baseUrl.startsWith('https://localhost') || baseUrl.startsWith('https://127.0.0.1')) {
+                const port = req.nextUrl.port || '3000';
+                baseUrl = `http://127.0.0.1:${port}`;
+            }
 
             fetch(`${baseUrl}/api/worker/process-document`, {
                 method: 'POST',

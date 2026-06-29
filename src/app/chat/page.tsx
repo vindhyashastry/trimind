@@ -17,6 +17,7 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface UploadedDoc {
     id: string;
@@ -166,12 +167,13 @@ function ChatContent() {
             const res = await fetch("/api/upload", { method: "POST", body: formData });
             if (res.ok) {
                 fetchDocuments(accessKey);
+                toast.success("Documents uploaded successfully!");
             } else {
                 const errorData = await res.json().catch(() => ({ error: "Unknown error" }));
-                alert(`Upload failed (${res.status}): ${errorData.error || "Please check your file size or network connection."}`);
+                toast.error(`Upload failed (${res.status}): ${errorData.error || "Please check your file size or network connection."}`);
             }
         } catch (error: any) {
-            alert(`Network error during upload: ${error.message}`);
+            toast.error(`Network error during upload: ${error.message}`);
         }
         finally {
             setIsUploading(false);
@@ -209,12 +211,14 @@ function ChatContent() {
         if (!confirm("Are you sure you want to delete this document? All its indexed data will be removed.")) return;
         try {
             const res = await fetch(`/api/documents?id=${id}&accessKey=${accessKey}`, { method: "DELETE" });
-            if (res.ok) fetchDocuments(accessKey);
-            else {
+            if (res.ok) {
+                fetchDocuments(accessKey);
+                toast.success("Document deleted successfully!");
+            } else {
                 const data = await res.json();
-                alert(data.error || "Failed to delete document");
+                toast.error(data.error || "Failed to delete document");
             }
-        } catch { alert("Failed to delete document"); }
+        } catch { toast.error("Failed to delete document"); }
     };
 
     const sendMessage = async (overrideInput?: string) => {
@@ -240,7 +244,17 @@ function ChatContent() {
                 body: JSON.stringify({ message: textToSend, domain, accessKey, history: messages, responseMode })
             });
             const data = await response.json();
-            if (data.error && !data.content) throw new Error(data.error);
+            
+            if (!response.ok || data.error) {
+                const errMsg = data.error || `Error ${response.status}: Failed to reach assistant.`;
+                let cleanMsg = errMsg;
+                if (errMsg.includes("Rate limit reached")) {
+                    cleanMsg = "Rate limit reached for Llama 3.3. Please wait a few moments and try again.";
+                } else if (errMsg.startsWith("Error: ")) {
+                    cleanMsg = errMsg.replace("Error: ", "");
+                }
+                throw new Error(cleanMsg);
+            }
 
             const assistMsg = {
                 role: "assistant",
@@ -258,12 +272,8 @@ function ChatContent() {
             setMessages(prev => [...prev, assistMsg]);
             saveMessage(assistMsg);
             if (pipelineMode === "local" && data.reasoning) setShowReasoning(true);
-        } catch {
-            setMessages(prev => [...prev, {
-                role: "assistant",
-                content: "Connection to domain pipeline failed. Please check your access key or network connection.",
-                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-            }]);
+        } catch (err: any) {
+            toast.error(err.message || "Connection to domain pipeline failed. Please check your access key or network connection.");
         } finally {
             setIsChatLoading(false);
         }
@@ -861,7 +871,7 @@ function ChatContent() {
                                                 ))
                                             ) : (
                                                 <div className="bg-background rounded-xl p-3 border border-border shadow-sm">
-                                                    <p className="text-xs leading-relaxed text-foreground/90 font-mono italic">
+                                                    <p className="text-xs leading-relaxed text-foreground/90 font-mono italic whitespace-pre-wrap">
                                                         {reasoning}
                                                     </p>
                                                 </div>

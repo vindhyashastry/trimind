@@ -47,3 +47,11 @@ debug_response.html
 
 # local data - belt and suspenders, already covered but be explicit
 /.data
+# SQLite dev database - never commit, use Supabase in production
+/prisma/dev.db
+/prisma/dev.db-journal
+# Large local vector store JSON - replaced by PostgreSQL
+/src/lib/local-db.json
+/src/lib/user-db.json
+# Generated prisma client
+/src/lib/generated/

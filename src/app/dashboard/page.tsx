@@ -17,6 +17,7 @@ import { ManageConnections } from "@/components/ManageConnections";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 // Simple, corporate-ready white and blue minimalist Bot SVG
 const SimpleBotSVG = () => (
@@ -137,12 +138,13 @@ export default function Dashboard() {
             const res = await fetch(`/api/user-keys/${id}`, { method: "DELETE" });
             if (res.ok) {
                 setAssistants((prev) => prev.filter((a) => a.id !== id));
+                toast.success("Assistant deleted successfully!");
             } else {
                 const data = await res.json();
-                alert(data.error || "Failed to delete");
+                toast.error(data.error || "Failed to delete");
             }
         } catch {
-            alert("Error deleting assistant");
+            toast.error("Error deleting assistant");
         } finally {
             setDeletingId(null);
         }

@@ -458,9 +458,9 @@ export default function LandingPage() {
             </div>
             <span className="text-sm font-semibold">Tri mind</span>
           </div>
-          <p className="text-sm text-muted-foreground">
+          {/* <p className="text-sm text-muted-foreground">
             © 2026 Tri mind Intelligent Systems.
-          </p>
+          </p> */}
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <Link href="/login" className="hover:text-foreground transition-colors">Login</Link>
             <Link href="/build" className="hover:text-foreground transition-colors">Build</Link>

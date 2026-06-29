@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 type Step = "domain" | "config" | "upload" | "finalize";
 
@@ -114,8 +115,9 @@ function BuildContent() {
 
                 setKey(newKey);
                 setStep("finalize");
+                toast.success("Assistant created successfully!");
             } catch (error: any) {
-                alert(`Upload failed: ${error.message}`);
+                toast.error(`Upload failed: ${error.message}`);
             } finally {
                 setIsUploading(false);
             }

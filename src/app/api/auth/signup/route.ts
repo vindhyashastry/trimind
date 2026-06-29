@@ -3,7 +3,7 @@ import { findUserByEmail, addUser, User } from '@/lib/user-db';
 import { hashPassword, generateToken } from '@/lib/auth-utils';
 import { nanoid } from 'nanoid';
 import { cookies } from 'next/headers';
-import prisma from '@/lib/prisma';
+
 
 export async function POST(req: Request) {
     try {
@@ -13,7 +13,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
         }
 
-        const existingUser = findUserByEmail(email);
+        const existingUser = await findUserByEmail(email);
         if (existingUser) {
             return NextResponse.json({ error: 'User already exists' }, { status: 400 });
         }
@@ -26,19 +26,7 @@ export async function POST(req: Request) {
             createdAt: new Date().toISOString(),
         };
 
-        addUser(newUser);
-
-        // Also sync into Prisma so Assistant FK (userId → User.id) works
-        await prisma.user.upsert({
-            where: { id: newUser.id },
-            create: {
-                id: newUser.id,
-                email: newUser.email,
-                password: newUser.passwordHash,
-                name: newUser.name,
-            },
-            update: {} // already exists, no-op
-        });
+        await addUser(newUser);
 
         const token = generateToken({ userId: newUser.id, email: newUser.email });
 
