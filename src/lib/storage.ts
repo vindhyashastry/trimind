@@ -17,11 +17,15 @@ export interface StorageService {
 }
 
 class SupabaseStorageService implements StorageService {
-    private supabase;
+    private _supabase: any = null;
 
-    constructor() {
-        this.supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_KEY!);
+    private get supabase() {
+        if (!this._supabase) {
+            this._supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_KEY!);
+        }
+        return this._supabase;
     }
+
 
     async uploadFile(fileName: string, buffer: Buffer): Promise<string> {
         const ext = path.extname(fileName);
@@ -62,13 +66,20 @@ class SupabaseStorageService implements StorageService {
 }
 
 class LocalStorageService implements StorageService {
-    constructor() {
-        if (!fs.existsSync(UPLOADS_DIR)) {
-            fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+    private initialized = false;
+
+    private init() {
+        if (!this.initialized) {
+            if (!fs.existsSync(UPLOADS_DIR)) {
+                fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+            }
+            this.initialized = true;
         }
     }
 
+
     async uploadFile(fileName: string, buffer: Buffer): Promise<string> {
+        this.init();
         const ext = path.extname(fileName);
         const safeName = `${nanoid()}${ext}`;
         const filePath = path.join(UPLOADS_DIR, safeName);
@@ -77,6 +88,7 @@ class LocalStorageService implements StorageService {
     }
 
     async downloadFile(fileUri: string): Promise<Buffer> {
+        this.init();
         if (!fileUri.startsWith('local://')) {
             throw new Error(`Unsupported URI schema: ${fileUri}`);
         }
@@ -86,6 +98,7 @@ class LocalStorageService implements StorageService {
     }
 
     async deleteFile(fileUri: string): Promise<void> {
+        this.init();
         if (!fileUri.startsWith('local://')) {
             throw new Error(`Unsupported URI schema: ${fileUri}`);
         }
